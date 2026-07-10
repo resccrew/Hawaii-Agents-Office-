@@ -1,0 +1,402 @@
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+:root {
+  --sand: #f4d9a0;
+  --sand-dark: #d9b876;
+  --ocean: #2dd4bf;
+  --ocean-deep: #0e7490;
+  --sunset: #fb7185;
+  --sunset-deep: #f97316;
+  --dusk: #1a1030;
+  --dusk-panel: #241a3d;
+  --ink: #2b1b3d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, var(--dusk) 0%, #2d1b4e 55%, #3a2159 100%);
+  color: var(--sand);
+  font-family: "Press Start 2P", "Courier New", monospace;
+  font-size: 10px;
+  image-rendering: pixelated;
+}
+
+/* Stepped-corner "pixel border" — no border-radius, chunky retro window frame. */
+.pixel-frame {
+  clip-path: polygon(
+    0 6px, 6px 6px, 6px 0,
+    calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
+  );
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 20px;
+  background: linear-gradient(90deg, var(--sunset-deep), var(--sunset) 55%, var(--ocean));
+  border-bottom: 4px solid var(--ink);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+.toolbar-title {
+  color: #2b1b3d;
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.35);
+  letter-spacing: 1px;
+}
+
+.toolbar input {
+  background: var(--sand);
+  border: 3px solid var(--ink);
+  color: var(--ink);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 10px;
+}
+.toolbar input::placeholder {
+  color: #8a6f42;
+}
+
+.toolbar button {
+  background: var(--ocean-deep);
+  border: 3px solid var(--ink);
+  color: var(--sand);
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+.toolbar button:hover {
+  background: var(--ocean);
+  color: var(--ink);
+}
+.toolbar button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+}
+
+.chat-panel {
+  position: fixed;
+  right: 16px;
+  top: 84px;
+  bottom: 16px;
+  width: 340px;
+  background: var(--dusk-panel);
+  border: 4px solid var(--sunset);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+}
+
+.chat-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, var(--sunset-deep), var(--sunset));
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.chat-panel-header button {
+  background: var(--dusk);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+}
+
+.chat-panel-status {
+  padding: 8px 12px;
+  font-size: 9px;
+  color: var(--ocean);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  background: rgba(45, 212, 191, 0.08);
+}
+
+.chat-panel-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: repeating-linear-gradient(
+    0deg,
+    var(--dusk-panel) 0px,
+    var(--dusk-panel) 3px,
+    #2a1f45 3px,
+    #2a1f45 4px
+  );
+}
+
+.chat-msg {
+  font-size: 9px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-msg-role {
+  font-size: 8px;
+  text-transform: uppercase;
+  color: var(--sunset);
+}
+
+.chat-msg-user {
+  align-self: flex-end;
+  text-align: right;
+}
+
+.chat-msg-assistant {
+  align-self: flex-start;
+}
+
+.chat-msg-system {
+  color: var(--sand-dark);
+}
+
+.chat-panel-input {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 3px solid var(--sunset);
+  background: var(--dusk);
+}
+
+.chat-panel-input input {
+  flex: 1;
+  background: var(--sand);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  padding: 8px;
+  font-family: inherit;
+  font-size: 9px;
+}
+
+.chat-panel-input button {
+  background: var(--ocean-deep);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+}
+.chat-panel-input button:hover {
+  background: var(--ocean);
+  color: var(--ink);
+}
+
+/* TaskBoard (left, fixed) and ChatPanel (right, fixed) are always-visible
+   overlays now (Phase 6), so the game canvas needs permanent side margins
+   instead of floating underneath them — otherwise desks near either edge
+   of the office render hidden behind a panel (found via WS state check:
+   a spawned Dev existed and was reachable, just invisible on screen). */
+.game-stage-wrapper {
+  margin-left: 300px;
+  margin-right: 360px;
+  width: fit-content;
+}
+
+/* Phase 6: task board */
+.task-board {
+  position: fixed;
+  left: 16px;
+  top: 84px;
+  bottom: 16px;
+  width: 280px;
+  background: var(--dusk-panel);
+  border: 4px solid var(--ocean);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+}
+
+.task-board-header {
+  padding: 10px 12px;
+  background: linear-gradient(90deg, var(--ocean-deep), var(--ocean));
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.task-board-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-board-empty {
+  font-size: 9px;
+  color: var(--sand-dark);
+  text-align: center;
+  padding-top: 20px;
+}
+
+.task-item {
+  background: var(--dusk);
+  border: 2px solid var(--sunset);
+  padding: 8px;
+  font-size: 9px;
+}
+.task-item-done {
+  border-color: var(--ocean);
+  opacity: 0.6;
+}
+.task-item-subject {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+.task-item-meta {
+  color: var(--sand-dark);
+  font-size: 8px;
+  margin-bottom: 6px;
+}
+.task-item-actions {
+  display: flex;
+  gap: 6px;
+}
+.task-item-actions button {
+  background: var(--ocean-deep);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 3px 6px;
+  font-size: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.task-board-input {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  border-top: 3px solid var(--ocean);
+}
+.task-board-input input {
+  flex: 1;
+  background: var(--sand);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  padding: 6px;
+  font-family: inherit;
+  font-size: 9px;
+}
+.task-board-input button {
+  background: var(--ocean-deep);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+/* Phase 6: add-agent button + modal.
+   The trigger sits inline in the toolbar (not fixed) so it can never
+   overlap TaskBoard/ChatPanel; the open modal is a centered overlay for
+   the same reason — a fixed corner placement collided with the chat
+   panel's send button in testing (both wanted the bottom-right corner). */
+.add-agent-fab {
+  background: var(--sunset-deep);
+  border: 3px solid var(--ink);
+  color: var(--ink);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+}
+.add-agent-fab:hover {
+  background: var(--sunset);
+}
+
+.add-agent-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.add-agent-modal {
+  width: 320px;
+  background: var(--dusk-panel);
+  border: 4px solid var(--sunset-deep);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+}
+.add-agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+}
+.add-agent-header button {
+  background: var(--dusk);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.add-agent-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 9px;
+  color: var(--sand-dark);
+}
+.add-agent-modal select,
+.add-agent-modal input,
+.add-agent-modal textarea {
+  background: var(--sand);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  padding: 6px;
+  font-family: inherit;
+  font-size: 9px;
+  resize: vertical;
+}
+.add-agent-error {
+  color: var(--sunset);
+  font-size: 8px;
+}
+.add-agent-submit {
+  background: var(--ocean-deep);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 10px;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.add-agent-submit:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

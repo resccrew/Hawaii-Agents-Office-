@@ -1,0 +1,15 @@
+[project]
+name = "studio-ops-hooks"
+version = "0.1.0"
+description = "Claude Code hooks for the Studio Ops visualizer"
+requires-python = ">=3.11"
+dependencies = [
+    "defusedxml>=0.7.1",
+]
+
+[project.scripts]
+studio-ops-hook = "studio_ops_hooks.main:run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

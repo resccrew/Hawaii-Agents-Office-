@@ -1,0 +1,36 @@
+studio_name = "Pixel Forge"
+
+[[departments]]
+name = "Engineering"
+floor_number = 1
+accent = "#2563eb"
+icon = "⚙️"
+repos = ["game-engine", "netcode"]
+
+[[departments]]
+name = "Art"
+floor_number = 2
+accent = "#db2777"
+icon = "🎨"
+repos = ["art-pipeline"]
+
+[[departments]]
+name = "Design"
+floor_number = 3
+accent = "#7c3aed"
+icon = "🧩"
+repos = ["design-docs"]
+
+[[departments]]
+name = "QA"
+floor_number = 4
+accent = "#059669"
+icon = "🐛"
+repos = ["qa-suite"]
+
+[[departments]]
+name = "Production"
+floor_number = 5
+accent = "#f59e0b"
+icon = "📋"
+repos = ["studio-ops"]
