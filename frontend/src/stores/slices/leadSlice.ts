@@ -17,6 +17,8 @@ export const initialLeadState: { lead: LeadAnimationState } = {
     position: PRODUCER_SPOT,
     currentTask: null,
     chatAvailable: true,
+    role: null,
+    name: null,
   },
 };
 
@@ -35,6 +37,8 @@ export const createLeadSlice: StateCreator<LeadSlice, [], [], LeadSlice> = (set)
               : "working",
         currentTask: backendLead.currentTask ?? state.lead.currentTask,
         chatAvailable: backendLead.chatAvailable,
+        role: backendLead.role ?? null,
+        name: backendLead.name ?? null,
       },
     })),
 });

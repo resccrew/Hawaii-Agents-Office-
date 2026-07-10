@@ -37,7 +37,12 @@ class ConversationalProvider(ABC):
 
     @abstractmethod
     async def spawn(
-        self, *, workspace_dir: str, initial_prompt: str, mcp_config_path: str | None = None
+        self,
+        *,
+        workspace_dir: str,
+        initial_prompt: str,
+        mcp_config_path: str | None = None,
+        permission_mode: str | None = None,
     ) -> SpawnResult:
         """Start a brand-new session with the first prompt. Returns the
         provider's own session id (for future resume) and its first reply."""
@@ -50,6 +55,7 @@ class ConversationalProvider(ABC):
         workspace_dir: str,
         message: str,
         mcp_config_path: str | None = None,
+        permission_mode: str | None = None,
     ) -> AsyncIterator[ProviderChunk]:
         """Continue an existing session with a new message."""
 

@@ -1,24 +1,24 @@
 "use client";
 
 import { useChatStore } from "@/stores/chatStore";
+import { connectWithRetry } from "./reconnectingWebSocket";
 
 // Manages /ws/chat/{session_id} lifecycle — kept separate from
 // webSocketController.ts (observation channel) per the plan, since chat
 // framing/backpressure must never compete with state_update broadcast.
+// Bugfix: now auto-reconnects instead of going silently dead on a drop.
 export function connectChat(sessionId: string, baseUrl = "ws://localhost:8010"): () => void {
-  const ws = new WebSocket(`${baseUrl}/ws/chat/${sessionId}`);
-
-  ws.onmessage = (event) => {
-    let msg: Record<string, unknown>;
-    try {
-      msg = JSON.parse(event.data);
-    } catch {
-      return;
-    }
-    useChatStore.getState().handleChatWsMessage(sessionId, msg);
-  };
-
-  return () => ws.close();
+  return connectWithRetry(`${baseUrl}/ws/chat/${sessionId}`, {
+    onMessage: (event) => {
+      let msg: Record<string, unknown>;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      useChatStore.getState().handleChatWsMessage(sessionId, msg);
+    },
+  });
 }
 
 export async function sendChatMessage(

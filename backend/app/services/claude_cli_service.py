@@ -26,10 +26,15 @@ second writer to the same on-disk session transcript the interactive CLI
 may also be writing to. `claude`'s own permission-mode for the resumed
 session's settings applies to headless turns too — if a headless turn
 would trigger a permission prompt, `claude -p` cannot prompt (there's no
-TTY) and the call will hang until `timeout_seconds` kills it. This is
-intentional: silently forcing --permission-mode bypassPermissions on every
-chat message would let a chat-originated turn run tools without
-confirmation, which is a bigger risk than a slow/timed-out chat reply.
+TTY) and the call will hang until `timeout_seconds` kills it.
+
+Bugfix pass: callers may now pass `permission_mode` explicitly (e.g.
+"bypassPermissions"). This module does NOT default it — the caller decides,
+because the right answer differs by who's on the other end: chat_bridge.py
+only sets it for Phase-6-spawned agents running in their own isolated
+workspace directory (never for a hook-observed interactive session, where
+silently bypassing permissions on a human's real project would be an actual
+safety regression, not a convenience).
 """
 
 from __future__ import annotations
@@ -61,6 +66,7 @@ async def send_headless_message(
     cwd: str | None = None,
     timeout_seconds: float = 120.0,
     mcp_config_path: str | None = None,
+    permission_mode: str | None = None,
 ) -> AsyncIterator[ChatChunk]:
     """Yield ChatChunks parsed from `claude -p --resume` stream-json output.
 
@@ -72,6 +78,10 @@ async def send_headless_message(
     create_task, ...) — needed on every resumed turn, not just spawn, since
     each `claude -p` invocation is a fresh process with no memory of a
     previous invocation's flags.
+
+    `permission_mode`: when set, passes `--permission-mode <value>` (e.g.
+    "bypassPermissions"). See module docstring — caller's responsibility to
+    decide when this is safe.
     """
     args = [
         "claude",
@@ -85,6 +95,8 @@ async def send_headless_message(
     ]
     if mcp_config_path:
         args += ["--mcp-config", mcp_config_path]
+    if permission_mode:
+        args += ["--permission-mode", permission_mode]
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -159,6 +171,7 @@ async def spawn_new_session(
     cwd: str,
     timeout_seconds: float = 180.0,
     mcp_config_path: str | None = None,
+    permission_mode: str | None = None,
 ) -> SpawnedSession:
     """Create a brand-new headless session (Phase 6 Add-Agent flow) — no
     --resume, since there's nothing to resume yet. Uses --output-format
@@ -170,6 +183,8 @@ async def spawn_new_session(
     args = ["claude", "-p", initial_prompt, "--output-format", "json"]
     if mcp_config_path:
         args += ["--mcp-config", mcp_config_path]
+    if permission_mode:
+        args += ["--permission-mode", permission_mode]
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,

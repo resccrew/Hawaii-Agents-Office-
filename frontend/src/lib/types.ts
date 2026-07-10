@@ -69,6 +69,8 @@ export interface Lead {
   bubble?: BubbleContent | null;
   position: Position;
   chatAvailable: boolean;
+  role?: DevRole | null;
+  name?: string | null;
 }
 
 export interface StudioState {

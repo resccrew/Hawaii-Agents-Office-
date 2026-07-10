@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { connectWithRetry } from "@/systems/reconnectingWebSocket";
 
 export type TaskStatus = "open" | "in_progress" | "done";
 
@@ -35,19 +36,21 @@ const EMPTY_TASKS: SharedTask[] = [];
 export const selectTasksFor = (departmentId: string) => (state: TaskStore) =>
   state.tasksByDepartment.get(departmentId) ?? EMPTY_TASKS;
 
+// Bugfix: now auto-reconnects instead of the task board going silently
+// stale on any connection drop.
 export function connectTaskBoard(departmentId: string, baseUrl = "ws://localhost:8010"): () => void {
-  const ws = new WebSocket(`${baseUrl}/ws/tasks/${departmentId}`);
-  ws.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(event.data);
-      if (msg.type === "task_board_update") {
-        useTaskStore.getState().setTasks(departmentId, msg.tasks);
+  return connectWithRetry(`${baseUrl}/ws/tasks/${departmentId}`, {
+    onMessage: (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "task_board_update") {
+          useTaskStore.getState().setTasks(departmentId, msg.tasks);
+        }
+      } catch {
+        // ignore malformed frames
       }
-    } catch {
-      // ignore malformed frames
-    }
-  };
-  return () => ws.close();
+    },
+  });
 }
 
 export async function createTask(

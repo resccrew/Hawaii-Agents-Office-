@@ -4,13 +4,19 @@ import { useCallback } from "react";
 import type { Graphics } from "pixi.js";
 import type { LeadAnimationState } from "@/stores/slices/types";
 import { useSpriteTexture } from "@/systems/useSpriteTexture";
+import { SPRITE_PATH_BY_ROLE } from "@/systems/spriteRoles";
 
 const WIDTH = 64;
 const HEIGHT = 100;
-const SPRITE_PATH = "/sprites/producer_front_idle.png";
+const DEFAULT_SPRITE_PATH = "/sprites/producer_front_idle.png";
 
 export function LeadCapsule({ lead, onClick }: { lead: LeadAnimationState; onClick?: () => void }) {
-  const texture = useSpriteTexture(SPRITE_PATH);
+  // Bugfix (double-render): a spawned peer agent's Lead carries its own
+  // role (see backend Lead.role) — render that role's sprite instead of
+  // always defaulting to the producer. Real interactive sessions have
+  // role=null and keep looking exactly like before.
+  const spritePath = (lead.role && SPRITE_PATH_BY_ROLE[lead.role]) || DEFAULT_SPRITE_PATH;
+  const texture = useSpriteTexture(spritePath);
 
   const draw = useCallback(
     (g: Graphics) => {
@@ -23,6 +29,7 @@ export function LeadCapsule({ lead, onClick }: { lead: LeadAnimationState; onCli
   );
 
   const scale = texture ? HEIGHT / texture.height : 1;
+  const label = lead.name ?? "Producer";
 
   return (
     <pixiContainer
@@ -44,7 +51,7 @@ export function LeadCapsule({ lead, onClick }: { lead: LeadAnimationState; onCli
       )}
       <pixiContainer y={-HEIGHT - 18} scale={0.5}>
         <pixiText
-          text="Producer"
+          text={label}
           anchor={0.5}
           style={{ fontSize: 24, fill: "#f8fafc", fontFamily: "monospace", fontWeight: "bold" }}
         />

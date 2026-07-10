@@ -100,6 +100,18 @@ class StateMachine:
         if event.event_type == EventType.SESSION_START:
             self.lead.state = LeadState.IDLE
             self.interactive_turn_active = False
+            # Bugfix: a spawned peer agent's role/name (see agents.py) —
+            # replaces the earlier synthesized-self-Dev hack.
+            if event.data.agent_role:
+                normalized = event.data.agent_role.lower().replace("-", "_")
+                for role in DevRole:
+                    if role.value == normalized:
+                        self.lead.role = role
+                        break
+            if event.data.agent_name:
+                self.lead.name = event.data.agent_name
+            if event.data.summary:
+                self.lead.current_task = event.data.summary
         elif event.event_type == EventType.SESSION_END:
             self.lead.state = LeadState.IDLE
             self.interactive_turn_active = False

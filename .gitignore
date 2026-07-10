@@ -8,10 +8,13 @@ __pycache__/
 node_modules/
 .next/
 .turbo/
+*.tsbuildinfo
 
 # Runtime data — spawned agent workspaces contain live session transcripts
-# and per-agent mcp-config.json, not source code.
+# and per-agent mcp-config.json, not source code. state/ is the
+# AgentRegistry/TaskBoard JSON persistence snapshot, same reasoning.
 agent-workspaces/
+state/
 
 # OS
 .DS_Store

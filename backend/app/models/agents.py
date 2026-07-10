@@ -93,6 +93,12 @@ class Lead(BaseModel):
     bubble: BubbleContent | None = None
     position: dict[str, int] = {"x": 640, "y": 830}
     chat_available: bool = True
+    # Bugfix (Phase 6 double-render): when set, this Lead IS a spawned
+    # peer agent (not a generic interactive session) — the frontend
+    # renders it with that role's sprite and this name instead of the
+    # default "Producer" capsule. None for real hook-observed sessions.
+    role: DevRole | None = None
+    name: str | None = None
 
 
 class StandupState(StrEnum):

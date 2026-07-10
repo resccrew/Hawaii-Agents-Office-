@@ -108,6 +108,12 @@ class SessionEventData(EventDataBase):
     """Payload for SESSION_START, SESSION_END."""
 
     reason: str | None = None
+    # Phase 6 bugfix: a spawned agent's SESSION_START carries its own role
+    # and display name, so the StateMachine's Lead can render as that agent
+    # directly instead of the earlier "SUBAGENT_START with agent_id ==
+    # session_id" hack (which produced a redundant idle Lead + real Dev).
+    agent_role: str | None = None
+    agent_name: str | None = None
 
 
 class ToolEventData(EventDataBase):

@@ -73,7 +73,18 @@ class ChatBridge:
         # reused by every drain (including the auto-drain triggered by
         # maybe_drain_on_state_change) — passing the raw `cwd` param again
         # below would silently drop this resolution back to None.
-        resolved_cwd = cwd or sm.working_dir
+        #
+        # Bugfix (found while verifying the Bug 4 persistence fix): after a
+        # backend restart, sm.working_dir is empty — StateMachine is rebuilt
+        # fresh in-memory and nothing re-fires a SESSION_START to repopulate
+        # it, even though the *agent* is still perfectly resumable (its
+        # AgentRegistry entry, including workspace_dir, DID survive the
+        # restart). Without this fallback, chat with a spawned agent broke
+        # after every backend restart with "No conversation found" — the
+        # exact cwd-mismatch failure mode this whole cwd-resolution dance
+        # exists to avoid, just reintroduced by the restart itself.
+        agent_for_cwd = get_agent_registry().find_by_claude_session(sm.session_id)
+        resolved_cwd = cwd or sm.working_dir or (agent_for_cwd.workspace_dir if agent_for_cwd else None)
         self._cwds[sm.session_id] = resolved_cwd
 
         if sm.interactive_turn_active:
@@ -128,11 +139,20 @@ class ChatBridge:
         # flags, so this must be re-passed every time, not just at spawn.
         agent = get_agent_registry().find_by_claude_session(sm.session_id)
         mcp_config_path = agent.mcp_config_path if agent else None
+        # bypassPermissions only for sessions we spawned ourselves (isolated
+        # agent-workspaces/ dir) — never for a real hook-observed interactive
+        # session, where bypassing permissions on the user's own project
+        # would be a genuine safety regression, not a convenience.
+        permission_mode = "bypassPermissions" if agent else None
 
         response_text = ""
         try:
             async for chunk in send_headless_message(
-                sm.session_id, text, cwd=cwd, mcp_config_path=mcp_config_path
+                sm.session_id,
+                text,
+                cwd=cwd,
+                mcp_config_path=mcp_config_path,
+                permission_mode=permission_mode,
             ):
                 if chunk.kind == "text_delta":
                     response_text = chunk.text

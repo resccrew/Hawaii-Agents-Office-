@@ -14,10 +14,18 @@ class ClaudeProvider(ConversationalProvider):
     name = "claude"
 
     async def spawn(
-        self, *, workspace_dir: str, initial_prompt: str, mcp_config_path: str | None = None
+        self,
+        *,
+        workspace_dir: str,
+        initial_prompt: str,
+        mcp_config_path: str | None = None,
+        permission_mode: str | None = None,
     ) -> SpawnResult:
         result = await claude_cli_service.spawn_new_session(
-            initial_prompt, cwd=workspace_dir, mcp_config_path=mcp_config_path
+            initial_prompt,
+            cwd=workspace_dir,
+            mcp_config_path=mcp_config_path,
+            permission_mode=permission_mode,
         )
         return SpawnResult(external_session_id=result.session_id, first_response=result.result_text)
 
@@ -28,8 +36,13 @@ class ClaudeProvider(ConversationalProvider):
         workspace_dir: str,
         message: str,
         mcp_config_path: str | None = None,
+        permission_mode: str | None = None,
     ) -> AsyncIterator[ProviderChunk]:
         async for chunk in claude_cli_service.send_headless_message(
-            external_session_id, message, cwd=workspace_dir, mcp_config_path=mcp_config_path
+            external_session_id,
+            message,
+            cwd=workspace_dir,
+            mcp_config_path=mcp_config_path,
+            permission_mode=permission_mode,
         ):
             yield ProviderChunk(kind=chunk.kind, text=chunk.text, raw=chunk.raw)

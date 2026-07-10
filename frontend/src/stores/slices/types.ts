@@ -35,4 +35,9 @@ export interface LeadAnimationState {
   position: Position;
   currentTask: string | null;
   chatAvailable: boolean;
+  // Bugfix (double-render): set when this Lead IS a spawned peer agent
+  // (backend/app/models/agents.py Lead.role/name) — renders with that
+  // role's sprite and name instead of the generic Producer capsule.
+  role: DevRole | null;
+  name: string | null;
 }

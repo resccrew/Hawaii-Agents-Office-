@@ -5,6 +5,7 @@ import { useTick } from "@pixi/react";
 import type { Graphics } from "pixi.js";
 import type { DevAnimationState } from "@/stores/slices/types";
 import { useSpriteTexture } from "@/systems/useSpriteTexture";
+import { SPRITE_PATH_BY_ROLE } from "@/systems/spriteRoles";
 
 // Phase 5: real sprite art (falls back to the Phase 2 procedural capsule
 // when a role's sprite hasn't been generated/approved yet, or fails to
@@ -12,14 +13,6 @@ import { useSpriteTexture } from "@/systems/useSpriteTexture";
 const WIDTH = 48;
 const HEIGHT = 80;
 const WALK_SPEED = 140; // px/sec, moving along the A*-routed path
-
-const SPRITE_PATH_BY_ROLE: Record<string, string> = {
-  programmer: "/sprites/programmer_front_idle.png",
-  game_designer: "/sprites/game_designer_front_idle.png",
-  artist: "/sprites/artist_front_idle.png",
-  qa_tester: "/sprites/qa_tester_front_idle.png",
-  producer: "/sprites/producer_front_idle.png",
-};
 
 export function DevCapsule({
   dev,

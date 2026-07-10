@@ -18,13 +18,19 @@ from __future__ import annotations
 import json
 import sys
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
 AGENT_WORKSPACES_ROOT = Path.home() / "studio-ops" / "agent-workspaces"
 MCP_SERVER_SCRIPT = Path(__file__).resolve().parent.parent / "mcp" / "studio_ops_mcp.py"
 BACKEND_URL = "http://localhost:8010"
+# Bugfix: registry was in-memory only — any backend restart (which happens
+# routinely during development, and will happen on any deploy/crash) lost
+# every spawned agent's identity, including mcp_config_path, silently
+# breaking chat_bridge.py's MCP-tool wiring for agents that were otherwise
+# still perfectly resumable. Minimal JSON snapshot, not a database.
+STATE_FILE = Path.home() / "studio-ops" / "state" / "agents.json"
 
 
 @dataclass
@@ -74,6 +80,7 @@ def _write_mcp_config(workspace: Path, agent_id: str) -> str:
 class AgentRegistry:
     def __init__(self) -> None:
         self._agents: dict[str, AgentSession] = {}
+        self._load()
 
     def create(self, *, provider: str, department_id: str, role: str, name: str) -> AgentSession:
         agent_id = f"agent-{uuid.uuid4().hex[:12]}"
@@ -90,6 +97,7 @@ class AgentRegistry:
         if provider == "claude":
             session.mcp_config_path = _write_mcp_config(workspace, agent_id)
         self._agents[agent_id] = session
+        self.save()
         return session
 
     def get(self, agent_id: str) -> AgentSession | None:
@@ -106,6 +114,34 @@ class AgentRegistry:
             if a.claude_session_id == claude_session_id:
                 return a
         return None
+
+    def save(self) -> None:
+        """Best-effort JSON snapshot — never raises, so a disk hiccup can't
+        break a spawn that otherwise succeeded."""
+        try:
+            STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            payload = [
+                {**asdict(a), "created_at": a.created_at.isoformat()}
+                for a in self._agents.values()
+            ]
+            tmp = STATE_FILE.with_suffix(".tmp")
+            tmp.write_text(json.dumps(payload, indent=2))
+            tmp.replace(STATE_FILE)
+        except OSError:
+            pass
+
+    def _load(self) -> None:
+        if not STATE_FILE.exists():
+            return
+        try:
+            raw = json.loads(STATE_FILE.read_text())
+        except (OSError, json.JSONDecodeError):
+            return
+        for entry in raw:
+            entry = dict(entry)
+            entry["created_at"] = datetime.fromisoformat(entry["created_at"])
+            session = AgentSession(**entry)
+            self._agents[session.agent_id] = session
 
 
 _registry: AgentRegistry | None = None
