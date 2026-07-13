@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import os
-
+from app.core.settings_store import get_settings_store
 from app.services.providers.base import GenerativeProvider, ProviderChunk
-
-API_KEY_ENV = "STUDIO_OPS_NANOBANANA_API_KEY"
 
 
 class NanoBananaProvider(GenerativeProvider):
@@ -20,15 +17,15 @@ class NanoBananaProvider(GenerativeProvider):
 
     @property
     def configured(self) -> bool:
-        return bool(os.environ.get(API_KEY_ENV))
+        return bool(get_settings_store().get("nanobanana_api_key"))
 
     async def generate(self, *, prompt: str, kind: str) -> ProviderChunk:
         if not self.configured:
             return ProviderChunk(
                 kind="error",
                 text=(
-                    f"nanobanana provider not configured — set {API_KEY_ENV} "
-                    "to enable image/video generation for agents."
+                    "nanobanana provider not configured — set an API key in Settings "
+                    "(or STUDIO_OPS_NANOBANANA_API_KEY) to enable image/video generation."
                 ),
             )
         # Real call would go here once a key is provided — e.g. a Gemini

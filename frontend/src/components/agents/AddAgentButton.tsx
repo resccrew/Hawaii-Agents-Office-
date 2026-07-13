@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useEmojiBurst } from "@/systems/useEmojiBurst";
+import { getHttpBase } from "@/systems/backendUrl";
+import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 
 const ROLES = [
   { value: "programmer", label: "Programmer" },
@@ -10,7 +13,20 @@ const ROLES = [
   { value: "producer", label: "Producer" },
 ];
 
-const DEPARTMENTS = ["Engineering", "Art", "Design", "QA"];
+// Which "brain" powers this agent — matches the backend's provider
+// registry (app/services/providers/__init__.py). Claude agents get the
+// full studio-ops MCP toolset (spawn/message/task tools); the others chat
+// and can be coordinated via chat, but can't yet call those tools
+// themselves (see openai_provider.py's docstring) — surfaced via the hint
+// text, not hidden, so picking one is an informed choice.
+const PROVIDERS = [
+  { value: "claude", label: "Claude", hint: "full studio-ops tool access" },
+  { value: "openai", label: "OpenAI (GPT)", hint: "chat only — needs STUDIO_OPS_OPENAI_API_KEY" },
+  { value: "gemini", label: "Gemini", hint: "chat only — needs STUDIO_OPS_GEMINI_API_KEY" },
+  { value: "ollama", label: "Ollama (local)", hint: "chat only — needs a local `ollama serve`" },
+];
+
+export const DEPARTMENTS = ["Engineering", "Art", "Design", "QA"];
 
 interface Props {
   onSpawned: (sessionId: string) => void;
@@ -18,18 +34,23 @@ interface Props {
 }
 
 // The whole point of Phase 6's Add-Agent flow: no terminal is ever shown.
-// This form POSTs to /api/v1/agents, which spawns `claude -p` invisibly
-// server-side and returns a session_id the moment it's ready — from here
-// on, the new agent behaves exactly like any other Dev: click it, chat
-// with it via the existing ChatPanel.
-export function AddAgentButton({ onSpawned, apiBase = "http://localhost:8010" }: Props) {
+// This form POSTs to /api/v1/agents, which spawns the chosen provider's
+// session invisibly server-side and returns a session_id the moment it's
+// ready — from here on, the new agent behaves exactly like any other Dev:
+// click it, chat with it via the existing ChatPanel.
+export function AddAgentButton({ onSpawned, apiBase = getHttpBase() }: Props) {
+  const defaultDepartment = useUiSettingsStore((s) => s.defaultDepartment);
   const [open, setOpen] = useState(false);
+  const [provider, setProvider] = useState(PROVIDERS[0].value);
   const [role, setRole] = useState(ROLES[0].value);
-  const [department, setDepartment] = useState(DEPARTMENTS[0]);
+  const [department, setDepartment] = useState(
+    DEPARTMENTS.includes(defaultDepartment) ? defaultDepartment : DEPARTMENTS[0],
+  );
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [status, setStatus] = useState<"idle" | "spawning" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const { burst, layer } = useEmojiBurst();
 
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
@@ -40,7 +61,7 @@ export function AddAgentButton({ onSpawned, apiBase = "http://localhost:8010" }:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: "claude",
+          provider,
           department_id: department,
           role,
           name: name.trim() || role,
@@ -65,11 +86,25 @@ export function AddAgentButton({ onSpawned, apiBase = "http://localhost:8010" }:
 
   if (!open) {
     return (
-      <button className="add-agent-fab pixel-frame" onClick={() => setOpen(true)}>
+      <button
+        className="add-agent-fab pixel-frame"
+        onClick={() => {
+          burst();
+          // Delay opening the modal — it replaces this button (and the
+          // burst layer riding on it) entirely, so opening immediately cut
+          // the animation off before a single frame of it was visible.
+          // Long enough to see the pop-and-fly, short enough to still feel
+          // like one snappy action.
+          window.setTimeout(() => setOpen(true), 350);
+        }}
+      >
         + agent
+        {layer}
       </button>
     );
   }
+
+  const providerHint = PROVIDERS.find((p) => p.value === provider)?.hint;
 
   return (
     <div className="add-agent-overlay">
@@ -78,6 +113,17 @@ export function AddAgentButton({ onSpawned, apiBase = "http://localhost:8010" }:
         <span>spawn new agent</span>
         <button onClick={() => setOpen(false)}>x</button>
       </div>
+      <label>
+        brain
+        <select value={provider} onChange={(e) => setProvider(e.target.value)}>
+          {PROVIDERS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        {providerHint && <span className="add-agent-hint">{providerHint}</span>}
+      </label>
       <label>
         role
         <select value={role} onChange={(e) => setRole(e.target.value)}>

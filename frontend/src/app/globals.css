@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
+/* ================= design tokens ================= */
 :root {
   --sand: #f4d9a0;
   --sand-dark: #d9b876;
@@ -7,127 +8,337 @@
   --ocean-deep: #0e7490;
   --sunset: #fb7185;
   --sunset-deep: #f97316;
+  --amber: #f59e0b;
+  --lime: #22c55e;
+  --red: #ef4444;
   --dusk: #1a1030;
+  --dusk-deep: #120a22;
   --dusk-panel: #241a3d;
+  --dusk-soft: #2e2250;
   --ink: #2b1b3d;
+
+  --toolbar-h: 60px;
+  --panel-w: 308px;
+  --panel-w-left: 300px;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+  overflow: hidden; /* app shell — fixed panels, nothing scrolls the page */
+}
+
 body {
   margin: 0;
-  background: linear-gradient(180deg, var(--dusk) 0%, #2d1b4e 55%, #3a2159 100%);
+  background: var(--dusk-deep);
   color: var(--sand);
   font-family: "Press Start 2P", "Courier New", monospace;
   font-size: 10px;
-  image-rendering: pixelated;
 }
 
-/* Stepped-corner "pixel border" — no border-radius, chunky retro window frame. */
+::selection {
+  background: var(--sunset);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 3px dashed var(--ocean);
+  outline-offset: 2px;
+}
+
+/* pixel scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--dusk);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ocean-deep);
+  border: 2px solid var(--dusk);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ocean);
+}
+
+/* Straight pixel border — no jagged corners. */
 .pixel-frame {
-  clip-path: polygon(
-    0 6px, 6px 6px, 6px 0,
-    calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
-    100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
-    6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
-  );
+  border: 4px solid var(--ink);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
 }
 
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Shared status dot (toolbar chip, roster cards, chat header). */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  display: inline-block;
+}
+.status-dot-active {
+  background: var(--lime);
+}
+.status-dot-starting {
+  background: var(--amber);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.status-dot-error {
+  background: var(--red);
+}
+.chat-dot-idle {
+  background: var(--ocean);
+}
+.chat-dot-queued {
+  background: var(--amber);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.chat-dot-streaming {
+  background: var(--lime);
+  animation: pulse-dot 0.8s ease-in-out infinite;
+}
+.chat-dot-error {
+  background: var(--red);
+}
+
+/* Shared empty-state block (tasks, roster, chat log). */
+.panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--sand-dark);
+  font-size: 9px;
+  line-height: 1.6;
+}
+.panel-empty-icon {
+  font-size: 18px;
+  color: var(--ocean-deep);
+}
+.panel-empty-hint {
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+/* ================= toolbar ================= */
 .toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--toolbar-h);
+  z-index: 40;
   display: flex;
   gap: 12px;
   align-items: center;
-  padding: 14px 20px;
+  padding: 0 20px;
   background: linear-gradient(90deg, var(--sunset-deep), var(--sunset) 55%, var(--ocean));
   border-bottom: 4px solid var(--ink);
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
 }
 
 .toolbar-title {
-  color: #2b1b3d;
+  color: var(--ink);
   text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.35);
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  font-size: 14px;
+  margin-right: 8px;
 }
 
-.toolbar input {
-  background: var(--sand);
-  border: 3px solid var(--ink);
-  color: var(--ink);
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: 10px;
+.toolbar-spacer {
+  flex: 1;
 }
-.toolbar input::placeholder {
-  color: #8a6f42;
+
+.toolbar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(26, 16, 48, 0.85);
+  border: 3px solid var(--ink);
+  color: var(--sand);
+  padding: 7px 12px;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
 }
 
 .toolbar button {
   background: var(--ocean-deep);
   border: 3px solid var(--ink);
   color: var(--sand);
-  padding: 8px 14px;
+  padding: 9px 16px;
   cursor: pointer;
   font-family: inherit;
   font-size: 10px;
+  letter-spacing: 0.5px;
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
 }
 .toolbar button:hover {
   background: var(--ocean);
   color: var(--ink);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
 }
 .toolbar button:active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
 }
 
-.status-dot {
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--ink);
+/* ================= office stage (cover-fit, docked between two panels) === */
+/* The wrapper hugs the space between the two docked side panels (activity
+   log on the left, team/tasks on the right — mirrors claude-office's
+   three-column layout); the canvas frame inside is sized by useFitSize in
+   COVER mode — it overflows the wrapper symmetrically and gets clipped, so
+   the office art reaches every edge with no letterbox bands. The scanline
+   backdrop only ever shows in the extreme-aspect fallback (MAX_OVERSCAN cap
+   in useFitSize). */
+.game-stage-wrapper {
+  position: fixed;
+  top: var(--toolbar-h);
+  bottom: 0;
+  left: var(--panel-w-left);
+  right: var(--panel-w);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    0deg,
+    var(--dusk-deep) 0px,
+    var(--dusk-deep) 3px,
+    #17102b 3px,
+    #17102b 4px
+  );
 }
 
-.chat-panel {
-  position: fixed;
-  right: 16px;
-  top: 84px;
-  bottom: 16px;
-  width: 340px;
+/* Sized inline by useFitSize; borderless — it's full-bleed scenery now,
+   and also the positioning context for the chat popup. */
+.game-canvas-frame {
+  position: relative;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.game-stage-wrapper canvas {
+  /* min-width/min-height: 0 override the flex-item default of
+     `min-width: auto`, which for a replaced element like <canvas>
+     resolves to its intrinsic size (STAGE_WIDTH/HEIGHT × devicePixelRatio
+     on Retina) — without this the canvas refuses to scale down to its
+     frame and overflows. Bit us on real Retina Macs, invisible in
+     dpr-1 headless testing. */
+  min-width: 0;
+  min-height: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* ================= chat windows (multi, draggable + resizable) ======= */
+.chat-window {
+  position: absolute;
   background: var(--dusk-panel);
   border: 4px solid var(--sunset);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+}
+/* Bottom-right resize grip — the little pixel corner. */
+.chat-window-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 3px,
+    var(--sunset) 3px 4px
+  );
+  touch-action: none;
 }
 
 .chat-panel-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 9px 10px;
   background: linear-gradient(90deg, var(--sunset-deep), var(--sunset));
   color: var(--ink);
   font-size: 9px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
-
+.chat-panel-header:active {
+  cursor: grabbing;
+}
+.chat-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-panel-grip {
+  opacity: 0.55;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
 .chat-panel-header button {
   background: var(--dusk);
   border: 2px solid var(--ink);
   color: var(--sand);
-  padding: 4px 8px;
+  padding: 3px 7px;
   cursor: pointer;
   font-family: inherit;
   font-size: 9px;
 }
+.chat-panel-header button:hover {
+  background: var(--sunset-deep);
+  color: var(--ink);
+}
 
 .chat-panel-status {
-  padding: 8px 12px;
-  font-size: 9px;
+  padding: 7px 12px;
+  font-size: 8px;
   color: var(--ocean);
   border-bottom: 2px solid rgba(255, 255, 255, 0.08);
   background: rgba(45, 212, 191, 0.08);
+}
+.chat-panel-status-queued {
+  color: var(--amber);
+  background: rgba(245, 158, 11, 0.08);
+}
+.chat-panel-status-streaming {
+  color: var(--lime);
+  background: rgba(34, 197, 94, 0.08);
+}
+.chat-panel-status-error {
+  color: var(--red);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .chat-panel-messages {
@@ -137,60 +348,172 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: repeating-linear-gradient(
-    0deg,
-    var(--dusk-panel) 0px,
-    var(--dusk-panel) 3px,
-    #2a1f45 3px,
-    #2a1f45 4px
-  );
+  background: var(--dusk);
 }
 
 .chat-msg {
   font-size: 9px;
-  line-height: 1.6;
+  line-height: 1.7;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-width: 92%;
 }
-
 .chat-msg-role {
-  font-size: 8px;
+  font-size: 7px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: var(--sunset);
+  opacity: 0.9;
 }
-
+.chat-msg-bubble {
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  background: var(--dusk-soft);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
 .chat-msg-user {
   align-self: flex-end;
+  align-items: flex-end;
   text-align: right;
 }
-
+.chat-msg-user .chat-msg-role {
+  color: var(--ocean);
+}
+.chat-msg-user .chat-msg-bubble {
+  background: var(--ocean-deep);
+  color: #eafffb;
+}
 .chat-msg-assistant {
   align-self: flex-start;
 }
-
 .chat-msg-system {
+  align-self: center;
+  align-items: center;
+  max-width: 100%;
+}
+.chat-msg-system .chat-msg-role {
+  display: none;
+}
+.chat-msg-system .chat-msg-bubble {
+  background: none;
+  border: none;
   color: var(--sand-dark);
+  font-size: 8px;
+  opacity: 0.85;
+  padding: 0 6px;
+}
+
+/* Drag-and-drop attach: the messages pane doubles as a drop zone (dashed
+   highlight + hint overlay while a file is dragged over it). */
+.chat-panel-messages-dragover {
+  outline: 3px dashed var(--ocean);
+  outline-offset: -3px;
+}
+.chat-panel-drop-hint {
+  position: sticky;
+  bottom: 0;
+  text-align: center;
+  padding: 8px;
+  color: var(--ocean);
+  font-size: 9px;
+  background: rgba(45, 212, 191, 0.12);
+  pointer-events: none;
+}
+
+.chat-panel-attach-error {
+  padding: 6px 10px 0;
+  color: var(--red);
+  font-size: 8px;
+  background: var(--dusk-panel);
+}
+
+.chat-panel-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px 0;
+  background: var(--dusk-panel);
+}
+.chat-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--dusk-soft);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 4px 6px;
+  font-size: 8px;
+  max-width: 160px;
+}
+.chat-attachment-chip button {
+  background: none;
+  border: none;
+  color: var(--sunset);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+}
+.chat-attachment-chip button:hover {
+  color: var(--red);
+}
+
+.chat-attach-button {
+  flex: 0 0 auto;
+  background: var(--dusk-soft);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s ease;
+}
+.chat-attach-button:hover {
+  background: var(--ocean-deep);
+}
+
+/* Per-message model/effort picker (Claude agents only) — sits right above
+   the input row so a choice made here obviously applies to the NEXT send,
+   not the whole conversation. */
+.chat-panel-model-row {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px 0;
+  background: var(--dusk-panel);
+}
+.chat-panel-model-row select {
+  flex: 1;
+  min-width: 0;
+  background: var(--dusk);
+  border: 2px solid var(--ink);
+  color: var(--sand-dark);
+  padding: 5px 4px;
+  font-family: inherit;
+  font-size: 8px;
 }
 
 .chat-panel-input {
   display: flex;
   gap: 8px;
-  padding: 12px;
+  padding: 10px;
   border-top: 3px solid var(--sunset);
-  background: var(--dusk);
+  background: var(--dusk-panel);
 }
-
 .chat-panel-input input {
   flex: 1;
+  min-width: 0;
   background: var(--sand);
   border: 2px solid var(--ink);
   color: var(--ink);
-  padding: 8px;
+  padding: 9px 8px;
   font-family: inherit;
   font-size: 9px;
 }
-
+.chat-panel-input input::placeholder {
+  color: #8a6f42;
+}
 .chat-panel-input button {
   background: var(--ocean-deep);
   border: 2px solid var(--ink);
@@ -199,43 +522,335 @@ body {
   cursor: pointer;
   font-family: inherit;
   font-size: 9px;
+  transition: background 0.15s ease;
 }
-.chat-panel-input button:hover {
+.chat-panel-input button:hover:not(:disabled) {
   background: var(--ocean);
   color: var(--ink);
 }
-
-/* TaskBoard (left, fixed) and ChatPanel (right, fixed) are always-visible
-   overlays now (Phase 6), so the game canvas needs permanent side margins
-   instead of floating underneath them — otherwise desks near either edge
-   of the office render hidden behind a panel (found via WS state check:
-   a spawned Dev existed and was reachable, just invisible on screen). */
-.game-stage-wrapper {
-  margin-left: 300px;
-  margin-right: 360px;
-  width: fit-content;
+.chat-panel-input button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
-/* Phase 6: task board */
-.task-board {
+/* ================= side panel (team + tasks) ================= */
+.side-panel {
   position: fixed;
-  left: 16px;
-  top: 84px;
-  bottom: 16px;
-  width: 280px;
+  top: var(--toolbar-h);
+  right: 0;
+  bottom: 0;
+  width: var(--panel-w);
+  z-index: 30;
   background: var(--dusk-panel);
-  border: 4px solid var(--ocean);
+  border-left: 4px solid var(--ink);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
 }
 
-.task-board-header {
-  padding: 10px 12px;
+/* ================= left panel (activity log) ================= */
+/* Mirrors .side-panel on the opposite edge — adapted from claude-office's
+   left-hand session browser, but since we don't have a "past sessions"
+   concept (agents are live/registered, not a session history to browse),
+   this docks the studio-wide event feed here instead: every hook event,
+   tool call, and chat turn any agent produces, streamed live. Claiming
+   this edge (in addition to the existing right panel) is also what makes
+   the office canvas itself smaller, as requested. */
+.side-panel-left {
+  position: fixed;
+  top: var(--toolbar-h);
+  left: 0;
+  bottom: 0;
+  width: var(--panel-w-left);
+  z-index: 30;
+  background: var(--dusk-panel);
+  border-right: 4px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.activity-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.activity-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 14px;
   background: linear-gradient(90deg, var(--ocean-deep), var(--ocean));
   color: var(--ink);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  border-bottom: 4px solid var(--ink);
+}
+.activity-log-count {
+  background: var(--dusk);
+  color: var(--sand);
+  border: 2px solid var(--ink);
+  padding: 2px 7px;
   font-size: 9px;
+}
+.activity-log-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.log-entry {
+  background: var(--dusk);
+  border: 2px solid var(--ink);
+  border-left: 4px solid var(--ocean-deep);
+  padding: 7px 8px;
+  font-size: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.log-entry-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.log-entry-time {
+  color: var(--sand-dark);
+  font-size: 8px;
+  flex-shrink: 0;
+}
+.log-entry-agent {
+  color: var(--ocean);
+  font-size: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.log-entry-summary {
+  color: var(--sand);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.log-type-badge {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 7px;
+  padding: 2px 5px;
+  border: 2px solid var(--ink);
+  flex-shrink: 0;
+}
+.log-type-session {
+  background: var(--sunset-deep);
+  color: var(--ink);
+}
+.log-type-tool {
+  background: var(--amber);
+  color: var(--ink);
+}
+.log-type-prompt {
+  background: var(--ocean);
+  color: var(--ink);
+}
+.log-type-chat {
+  background: var(--ocean-deep);
+  color: var(--sand);
+}
+.log-type-warn {
+  background: #f97316;
+  color: var(--ink);
+}
+.log-type-agent {
+  background: #a78bfa;
+  color: var(--ink);
+}
+.log-type-idle {
+  background: var(--dusk-soft);
+  color: var(--sand-dark);
+}
+.log-type-error {
+  background: var(--red);
+  color: var(--sand);
+}
+.log-type-task {
+  background: var(--lime);
+  color: var(--ink);
+}
+.log-type-default {
+  background: var(--dusk-soft);
+  color: var(--sand);
+}
+
+.side-panel-tabs {
+  display: flex;
+  border-bottom: 4px solid var(--ink);
+  background: var(--dusk);
+}
+.side-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--dusk);
+  border: none;
+  border-right: 4px solid var(--ink);
+  color: var(--sand-dark);
+  padding: 13px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.side-tab:last-child {
+  border-right: none;
+}
+.side-tab:hover {
+  color: var(--sand);
+  background: var(--dusk-soft);
+}
+.side-tab-active {
+  background: var(--dusk-panel);
+  color: var(--ocean);
+  box-shadow: inset 0 -4px 0 var(--ocean);
+}
+.side-tab-badge {
+  background: var(--sunset-deep);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  font-size: 8px;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+/* --- team tab --- */
+.team-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.team-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-card {
+  background: var(--dusk);
+  border: 3px solid var(--ink);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+.agent-card-clickable {
+  cursor: pointer;
+}
+.agent-card-clickable:hover {
+  border-color: var(--ocean);
+  transform: translate(-1px, -1px);
+}
+.agent-card-selected {
+  border-color: var(--sunset);
+  box-shadow: 4px 4px 0 rgba(251, 113, 133, 0.25);
+}
+
+.agent-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-card-name {
+  font-size: 10px;
+  color: var(--sand);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-card-role {
+  margin-left: auto;
+  font-size: 7px;
+  color: var(--ocean);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.agent-card-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 8px;
+  color: var(--sand-dark);
+}
+.agent-card-session {
+  opacity: 0.75;
+}
+.agent-card-error {
+  font-size: 8px;
+  color: var(--red);
+  line-height: 1.5;
+  word-break: break-word;
+}
+.agent-card-actions {
+  display: flex;
+  gap: 8px;
+}
+.agent-card-actions button {
+  flex: 1;
+  background: var(--ocean-deep);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 7px 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 8px;
+  transition: background 0.15s ease;
+}
+.agent-card-actions button:hover:not(:disabled) {
+  background: var(--ocean);
+  color: var(--ink);
+}
+.agent-card-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.agent-card-actions .agent-card-stop {
+  flex: 0 0 auto;
+  background: #7f1d1d;
+}
+.agent-card-actions .agent-card-stop:hover:not(:disabled) {
+  background: var(--red);
+  color: var(--sand);
+}
+
+/* --- tasks tab --- */
+.tasks-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tasks-tab-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 8px;
+  color: var(--sand-dark);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  background: rgba(45, 212, 191, 0.06);
 }
 
 .task-board-list {
@@ -247,44 +862,77 @@ body {
   gap: 8px;
 }
 
-.task-board-empty {
-  font-size: 9px;
-  color: var(--sand-dark);
-  text-align: center;
-  padding-top: 20px;
-}
-
 .task-item {
   background: var(--dusk);
-  border: 2px solid var(--sunset);
-  padding: 8px;
+  border: 3px solid var(--ink);
+  border-left: 6px solid var(--sunset-deep);
+  padding: 9px;
   font-size: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.task-item-in_progress {
+  border-left-color: var(--amber);
 }
 .task-item-done {
-  border-color: var(--ocean);
-  opacity: 0.6;
+  border-left-color: var(--ocean);
+  opacity: 0.55;
 }
 .task-item-subject {
-  margin-bottom: 4px;
-  line-height: 1.4;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.task-item-done .task-item-subject {
+  text-decoration: line-through;
 }
 .task-item-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 7px;
   color: var(--sand-dark);
-  font-size: 8px;
-  margin-bottom: 6px;
+}
+.task-status {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border: 2px solid var(--ink);
+}
+.task-status-open {
+  background: var(--sunset-deep);
+  color: var(--ink);
+}
+.task-status-in_progress {
+  background: var(--amber);
+  color: var(--ink);
+}
+.task-status-done {
+  background: var(--ocean-deep);
+  color: var(--sand);
+}
+.task-assignee {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .task-item-actions {
   display: flex;
   gap: 6px;
 }
 .task-item-actions button {
-  background: var(--ocean-deep);
+  background: var(--dusk-soft);
   border: 2px solid var(--ink);
   color: var(--sand);
-  padding: 3px 6px;
+  padding: 5px 8px;
   font-size: 8px;
   cursor: pointer;
   font-family: inherit;
+  transition: background 0.15s ease;
+}
+.task-item-actions button:hover {
+  background: var(--ocean);
+  color: var(--ink);
 }
 
 .task-board-input {
@@ -292,36 +940,43 @@ body {
   gap: 6px;
   padding: 10px;
   border-top: 3px solid var(--ocean);
+  background: var(--dusk);
 }
 .task-board-input input {
   flex: 1;
+  min-width: 0;
   background: var(--sand);
   border: 2px solid var(--ink);
   color: var(--ink);
-  padding: 6px;
+  padding: 9px 8px;
   font-family: inherit;
   font-size: 9px;
+}
+.task-board-input input::placeholder {
+  color: #8a6f42;
 }
 .task-board-input button {
   background: var(--ocean-deep);
   border: 2px solid var(--ink);
   color: var(--sand);
-  padding: 6px 10px;
+  padding: 8px 12px;
   font-family: inherit;
   font-size: 9px;
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+.task-board-input button:hover {
+  background: var(--ocean);
+  color: var(--ink);
 }
 
-/* Phase 6: add-agent button + modal.
-   The trigger sits inline in the toolbar (not fixed) so it can never
-   overlap TaskBoard/ChatPanel; the open modal is a centered overlay for
-   the same reason — a fixed corner placement collided with the chat
-   panel's send button in testing (both wanted the bottom-right corner). */
+/* ================= add-agent modal ================= */
 .add-agent-fab {
+  position: relative;
   background: var(--sunset-deep);
   border: 3px solid var(--ink);
   color: var(--ink);
-  padding: 8px 14px;
+  padding: 9px 14px;
   font-family: inherit;
   font-size: 10px;
   cursor: pointer;
@@ -331,44 +986,91 @@ body {
   background: var(--sunset);
 }
 
+/* Emoji burst — see useEmojiBurst.tsx. Layer sits centered on whichever
+   element renders it, particles fly outward and fade via precomputed
+   per-particle --dx/--dy offsets (CSS has no sin/cos to compute these
+   itself). pointer-events: none so the burst never blocks the button. */
+.emoji-burst-layer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+.emoji-burst-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  animation: emoji-burst-fly 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+@keyframes emoji-burst-fly {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.7);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emoji-burst-particle {
+    display: none;
+  }
+}
+
 .add-agent-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 5, 20, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 30;
+  z-index: 50;
 }
 
 .add-agent-modal {
-  width: 320px;
+  width: 340px;
   background: var(--dusk-panel);
   border: 4px solid var(--sunset-deep);
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+  gap: 12px;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
 }
 .add-agent-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 10px;
+  font-size: 11px;
+  color: var(--sunset);
 }
 .add-agent-header button {
   background: var(--dusk);
   border: 2px solid var(--ink);
   color: var(--sand);
-  padding: 2px 8px;
+  padding: 3px 9px;
   cursor: pointer;
   font-family: inherit;
+}
+.add-agent-header button:hover {
+  background: var(--sunset-deep);
+  color: var(--ink);
 }
 .add-agent-modal label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 9px;
   color: var(--sand-dark);
 }
@@ -378,25 +1080,227 @@ body {
   background: var(--sand);
   border: 2px solid var(--ink);
   color: var(--ink);
-  padding: 6px;
+  padding: 8px;
   font-family: inherit;
   font-size: 9px;
   resize: vertical;
 }
-.add-agent-error {
-  color: var(--sunset);
+.add-agent-hint {
   font-size: 8px;
+  color: var(--ocean);
+  opacity: 0.85;
+}
+.add-agent-error {
+  color: var(--red);
+  font-size: 8px;
+  line-height: 1.5;
+  padding: 0 2px;
 }
 .add-agent-submit {
   background: var(--ocean-deep);
   border: 2px solid var(--ink);
   color: var(--sand);
-  padding: 10px;
+  padding: 12px;
   font-family: inherit;
   font-size: 10px;
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+.add-agent-submit:hover:not(:disabled) {
+  background: var(--ocean);
+  color: var(--ink);
 }
 .add-agent-submit:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+/* ================= settings modal ================= */
+.settings-modal {
+  width: 420px;
+  max-height: 80vh;
+  background: var(--dusk-panel);
+  border: 4px solid var(--ocean-deep);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+}
+.settings-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-group-title {
+  font-size: 10px;
+  color: var(--ocean);
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 6px;
+}
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.settings-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--sand-dark);
+}
+.settings-field input {
+  background: var(--sand);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  padding: 8px;
+  font-family: inherit;
+  font-size: 9px;
+}
+.settings-source {
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border: 2px solid var(--ink);
+}
+.settings-source-override {
+  background: var(--lime);
+  color: var(--ink);
+}
+.settings-source-env {
+  background: var(--amber);
+  color: var(--ink);
+}
+.settings-source-unset {
+  background: var(--dusk-soft);
+  color: var(--sand-dark);
+}
+.settings-hint {
+  font-size: 8px;
+  color: var(--sand-dark);
+  line-height: 1.6;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  padding-top: 10px;
+}
+.settings-saved {
+  color: var(--lime);
+  font-size: 9px;
+  text-align: center;
+}
+
+/* Tabs inside the settings modal reuse .side-panel-tabs/.side-tab (the
+   right-panel team/tasks tabs) for visual consistency, but that component
+   assumes it's flush against a fixed sidebar's edges — flatten the corners
+   and border here since it's floating inside a modal instead. */
+.settings-tabs {
+  border: 2px solid var(--ink);
+  margin: 0 -2px;
+}
+.settings-checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  color: var(--sand-dark);
+  cursor: pointer;
+}
+.settings-checkbox-field input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ocean-deep);
+}
+.settings-model-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.settings-model-field select {
+  background: var(--sand);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  padding: 8px;
+  font-family: inherit;
+  font-size: 9px;
+}
+.settings-model-custom {
+  display: flex;
+  gap: 6px;
+}
+.settings-model-custom input {
+  flex: 1;
+  background: var(--sand);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  padding: 8px;
+  font-family: inherit;
+  font-size: 9px;
+}
+.settings-model-custom button {
+  background: var(--dusk-soft);
+  border: 2px solid var(--ink);
+  color: var(--sand);
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 8px;
+  cursor: pointer;
+}
+.settings-model-custom button:hover {
+  background: var(--ocean-deep);
+}
+.settings-model-source {
+  font-size: 7px;
+  color: var(--sand-dark);
+  opacity: 0.85;
+  line-height: 1.4;
+}
+
+/* ================= responsive & motion ================= */
+@media (max-width: 1400px) {
+  :root {
+    --panel-w: 260px;
+    --panel-w-left: 240px;
+  }
+}
+
+@media (max-width: 1000px) {
+  /* Small screens: both side panels overlay the office's edges instead of
+     squeezing the canvas into a sliver. */
+  .game-stage-wrapper {
+    left: 0;
+    right: 0;
+  }
+  .side-panel,
+  .side-panel-left {
+    opacity: 0.96;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Manual override (General settings → "reduce motion"), same effect as the
+   OS-level media query above but independent of it — page.tsx stamps
+   data-reduce-motion="true" on <html> from uiSettingsStore. */
+:root[data-reduce-motion="true"] *,
+:root[data-reduce-motion="true"] *::before,
+:root[data-reduce-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }

@@ -63,10 +63,25 @@ def _event(event_type: str, session_id: str, **data) -> dict:
     }
 
 
+async def _recv(ws, timeout: float = 10) -> dict:
+    """recv() that transparently discards a leading `chat_history` frame.
+    The fixture session below is reused (and its conversation now persists
+    to disk — see conversation_store.py), so a fresh connection may replay
+    its accumulated history as the very first frame before anything this
+    test triggers. That's correct production behavior, not something these
+    behavioral tests care about — they assert on the specific event
+    sequence a given action produces, which chat_history isn't part of."""
+    while True:
+        msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=timeout))
+        if msg.get("type") == "chat_history":
+            continue
+        return msg
+
+
 async def _recv_until_terminal(ws, max_messages: int = 10) -> list[dict]:
     received = []
     for _ in range(max_messages):
-        msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=30))
+        msg = await _recv(ws, timeout=30)
         received.append(msg)
         if msg.get("type") in ("chat_turn_complete", "chat_error"):
             break
@@ -94,14 +109,14 @@ async def test_chat_queues_while_busy_and_drains_on_stop() -> None:
             assert resp.status_code == 200
             assert resp.json()["status"] == "queued"
 
-            queued_msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+            queued_msg = await _recv(ws)
             assert queued_msg["type"] == "chat_queued"
 
             # Terminal goes idle — must auto-drain via the EventProcessor
             # post-hook, with no further action from us.
             await http.post("/api/v1/events", json=_event("stop", FIXTURE_SESSION_ID))
 
-            started = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
+            started = await _recv(ws)
             assert started["type"] == "chat_turn_started"
 
             trail = await _recv_until_terminal(ws)

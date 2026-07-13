@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { getHttpBase, getWsBase } from "@/systems/backendUrl";
 import { connectWithRetry } from "@/systems/reconnectingWebSocket";
 
 export type TaskStatus = "open" | "in_progress" | "done";
@@ -38,7 +39,7 @@ export const selectTasksFor = (departmentId: string) => (state: TaskStore) =>
 
 // Bugfix: now auto-reconnects instead of the task board going silently
 // stale on any connection drop.
-export function connectTaskBoard(departmentId: string, baseUrl = "ws://localhost:8010"): () => void {
+export function connectTaskBoard(departmentId: string, baseUrl = getWsBase()): () => void {
   return connectWithRetry(`${baseUrl}/ws/tasks/${departmentId}`, {
     onMessage: (event) => {
       try {
@@ -56,7 +57,7 @@ export function connectTaskBoard(departmentId: string, baseUrl = "ws://localhost
 export async function createTask(
   departmentId: string,
   subject: string,
-  apiBase = "http://localhost:8010",
+  apiBase = getHttpBase(),
 ): Promise<void> {
   await fetch(`${apiBase}/api/v1/tasks`, {
     method: "POST",
@@ -68,7 +69,7 @@ export async function createTask(
 export async function updateTaskStatus(
   taskId: string,
   status: TaskStatus,
-  apiBase = "http://localhost:8010",
+  apiBase = getHttpBase(),
 ): Promise<void> {
   await fetch(`${apiBase}/api/v1/tasks/${taskId}`, {
     method: "PATCH",

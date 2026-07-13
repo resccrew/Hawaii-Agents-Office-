@@ -185,7 +185,18 @@ class StateMachine:
     def _apply_chat(self, event: ChatEvent) -> None:
         """Chat-bridge turns are tagged source="chat" so the frontend/observation
         timeline can distinguish them from real interactive terminal activity
-        (Phase 3, plan item: "Chat message attribution in the observation timeline")."""
+        (Phase 3, plan item: "Chat message attribution in the observation timeline").
+
+        Also drives the office's busy/idle visual: a spawned agent has no hook
+        stream (headless `claude -p`), so chat turns are the ONLY activity
+        signal the room ever sees. The prompt half of a turn (chat_bridge
+        _record(prompt=...)) flips the Lead to WORKING; the response half
+        (_record(response_text=...)) flips it back to IDLE. Broadcast to
+        overview happens for free — this event goes through EventProcessor."""
+        if event.data.prompt:
+            self.lead.state = LeadState.WORKING
+        if event.data.response_text:
+            self.lead.state = LeadState.IDLE
         if event.data.prompt:
             self.conversation.append(
                 ConversationEntry(
@@ -251,7 +262,7 @@ class StateMachine:
                 id=str(uuid.uuid4()),
                 type=str(event.event_type),
                 agentId=event.data.agent_id or "lead",
-                summary=event.data.summary or event.data.message or str(event.event_type),
+                summary=_summary_for(event),
                 timestamp=event.timestamp.isoformat(),
                 detail={},
             )
@@ -274,6 +285,22 @@ class StateMachine:
             department_id=self.department_id,
             room_id=self.room_id,
         )
+
+
+def _summary_for(event: AnyEvent) -> str:
+    """A human-readable one-liner for the activity log. Most event types
+    already carry `summary`/`message`; chat-bridge turns don't (they carry
+    `prompt`/`response_text` instead — see ChatEventData), so without this
+    special case every chat entry in the log just repeated its own type
+    name ("chat_message") instead of showing what was actually said."""
+    if isinstance(event, ChatEvent):
+        text = event.data.prompt or event.data.response_text or ""
+        prefix = "you: " if event.data.prompt else "reply: "
+        text = text.strip().replace("\n", " ")
+        if len(text) > 140:
+            text = text[:140] + "…"
+        return f"{prefix}{text}" if text else str(event.event_type)
+    return event.data.summary or event.data.message or str(event.event_type)
 
 
 _ROLE_CYCLE = [

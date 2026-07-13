@@ -15,17 +15,35 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 from app.core.agent_registry import get_agent_registry
+from app.core.attachments import SavedAttachment
 from app.core.connection_manager import ConnectionManager
 from app.core.event_processor import EventProcessor
 from app.core.state_machine import StateMachine
 from app.models.events import ChatEvent, ChatEventData, EventType
-from app.services.claude_cli_service import ClaudeCliError, send_headless_message
+from app.services.providers import get_conversational_provider
+from app.services.providers.base import ProviderError
 
 LOCK_DIR = Path.home() / ".claude" / "studio-ops-locks"
+
+
+@dataclass
+class _QueuedMessage:
+    text: str
+    # Per-message model/effort choice (see ChatWindow.tsx's selector) —
+    # carried on the QUEUED item itself, not just the send call, so a
+    # message that has to wait behind an in-flight turn still uses whatever
+    # was selected at the moment it was sent, not whatever's selected by
+    # the time it's finally drained.
+    model: str | None = None
+    effort: str | None = None
+    # Files attached to THIS message specifically (already saved to disk +
+    # classified by the route layer — see app/core/attachments.py).
+    attachments: list[SavedAttachment] | None = None
 
 
 class ChatBridge:
@@ -33,7 +51,7 @@ class ChatBridge:
         self.manager = manager
         self.processor = processor
         self._locks: dict[str, asyncio.Lock] = {}
-        self._queues: dict[str, list[str]] = {}
+        self._queues: dict[str, list[_QueuedMessage]] = {}
         self._cwds: dict[str, str | None] = {}
         LOCK_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -58,14 +76,28 @@ class ChatBridge:
         return self._locks[session_id]
 
     async def enqueue_chat_message(
-        self, sm: StateMachine, text: str, *, cwd: str | None = None
+        self,
+        sm: StateMachine,
+        text: str,
+        *,
+        cwd: str | None = None,
+        model: str | None = None,
+        effort: str | None = None,
+        attachments: list[SavedAttachment] | None = None,
     ) -> None:
         """Best-effort send: if the interactive terminal has a turn in
         flight, queue and return immediately; a drain happens next time
         this is called for the session (simple pull-based drain, adequate
-        for the expected chat cadence of a human clicking a character)."""
+        for the expected chat cadence of a human clicking a character).
+
+        `model`/`effort`: Claude-only (`claude -p --model --effort`), chosen
+        per-message from ChatWindow.tsx's selector — ignored by other
+        providers (see their send() implementations).
+
+        `attachments`: files attached to this message (already saved+
+        classified by the caller — see app/core/attachments.py)."""
         queue = self._queues.setdefault(sm.session_id, [])
-        queue.append(text)
+        queue.append(_QueuedMessage(text=text, model=model, effort=effort, attachments=attachments))
         # Empirically required (see claude_cli_service.py docstring):
         # `--resume` fails outside the session's original working directory.
         # Fall back to whatever StateMachine captured from hook events if
@@ -116,10 +148,26 @@ class ChatBridge:
         async with lock:
             queue = self._queues.setdefault(sm.session_id, [])
             while queue and not sm.interactive_turn_active:
-                text = queue.pop(0)
-                await self._send_one(sm, text, cwd=cwd)
+                queued = queue.pop(0)
+                await self._send_one(
+                    sm,
+                    queued.text,
+                    cwd=cwd,
+                    model=queued.model,
+                    effort=queued.effort,
+                    attachments=queued.attachments,
+                )
 
-    async def _send_one(self, sm: StateMachine, text: str, *, cwd: str | None) -> None:
+    async def _send_one(
+        self,
+        sm: StateMachine,
+        text: str,
+        *,
+        cwd: str | None,
+        model: str | None = None,
+        effort: str | None = None,
+        attachments: list[SavedAttachment] | None = None,
+    ) -> None:
         lock_file = LOCK_DIR / f"{sm.session_id}.lock"
         try:
             lock_file.touch(exist_ok=True)
@@ -127,10 +175,19 @@ class ChatBridge:
             pass  # best-effort defense-in-depth only; never block chat on this
 
         turn_id = str(uuid.uuid4())
+        # What the HUMAN sees (chat log / history replay) gets a short
+        # "📎 filename" note per attachment; what the PROVIDER receives is
+        # the original `text` unmodified — each provider augments it with
+        # the actual attachment content itself (see provider.send() below),
+        # so the note here is purely a UI affordance, not duplicated content.
+        display_text = text
+        if attachments:
+            names = ", ".join(a.filename for a in attachments)
+            display_text = f"{text}\n\n📎 {names}" if text else f"📎 {names}"
         await self.manager.broadcast_chat(
-            sm.session_id, {"type": "chat_turn_started", "turn_id": turn_id, "text": text}
+            sm.session_id, {"type": "chat_turn_started", "turn_id": turn_id, "text": display_text}
         )
-        await self._record(sm.session_id, prompt=text)
+        await self._record(sm.session_id, prompt=display_text)
 
         # Phase 6: if this session belongs to a spawned agent (not just a
         # hook-observed interactive one), keep its studio-ops MCP tools
@@ -144,15 +201,28 @@ class ChatBridge:
         # session, where bypassing permissions on the user's own project
         # would be a genuine safety regression, not a convenience.
         permission_mode = "bypassPermissions" if agent else None
+        # Dispatch through the provider registry instead of hardcoding
+        # Claude — a hook-observed session (no registry entry) is always
+        # Claude (the only thing that emits hook events); a spawned agent
+        # carries whichever provider it was hired with (see agent_spawner.py
+        # / studio_spawn_agent), so its ongoing turns use the SAME brain its
+        # first turn did, not always Claude.
+        provider_name = agent.provider if agent else "claude"
+        provider = get_conversational_provider(provider_name)
 
         response_text = ""
         try:
-            async for chunk in send_headless_message(
-                sm.session_id,
-                text,
-                cwd=cwd,
+            if provider is None:
+                raise ProviderError(f"unknown provider: {provider_name}")
+            async for chunk in provider.send(
+                external_session_id=sm.session_id,
+                workspace_dir=cwd or "",
+                message=text,
                 mcp_config_path=mcp_config_path,
                 permission_mode=permission_mode,
+                model=model,
+                effort=effort,
+                attachments=attachments,
             ):
                 if chunk.kind == "text_delta":
                     response_text = chunk.text
@@ -166,7 +236,7 @@ class ChatBridge:
                         {"type": "chat_error", "turn_id": turn_id, "message": chunk.text},
                     )
                     return
-        except ClaudeCliError as exc:
+        except ProviderError as exc:
             await self.manager.broadcast_chat(
                 sm.session_id, {"type": "chat_error", "turn_id": turn_id, "message": str(exc)}
             )

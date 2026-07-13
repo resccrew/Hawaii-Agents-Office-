@@ -6,6 +6,7 @@ import type { Graphics } from "pixi.js";
 import type { DevAnimationState } from "@/stores/slices/types";
 import { useSpriteTexture } from "@/systems/useSpriteTexture";
 import { SPRITE_PATH_BY_ROLE } from "@/systems/spriteRoles";
+import { LabelTag } from "./LabelTag";
 
 // Phase 5: real sprite art (falls back to the Phase 2 procedural capsule
 // when a role's sprite hasn't been generated/approved yet, or fails to
@@ -92,19 +93,16 @@ export function DevCapsule({
       ) : (
         <pixiGraphics draw={draw} />
       )}
-      <pixiContainer y={-HEIGHT - 16} scale={0.5}>
-        <pixiText
-          text={dev.name ?? dev.role}
-          anchor={0.5}
-          style={{ fontSize: 22, fill: "#f8fafc", fontFamily: "monospace" }}
-        />
+      {/* Name sits just above the head — clear of both the sprite and the
+          department label (which is anchored much higher, see
+          StudioGame.tsx). Status sits just below the feet, on the floor —
+          not mid-body, which is where it used to collide with the sprite
+          artwork before real character sprites replaced flat capsules. */}
+      <pixiContainer y={-HEIGHT - 14}>
+        <LabelTag text={dev.name ?? dev.role} fontSize={20} />
       </pixiContainer>
-      <pixiContainer y={-HEIGHT / 2} scale={0.5}>
-        <pixiText
-          text={isMoving ? "walking" : dev.phase}
-          anchor={0.5}
-          style={{ fontSize: 18, fill: "#f8fafc", fontFamily: "monospace" }}
-        />
+      <pixiContainer y={16}>
+        <LabelTag text={isMoving ? "walking" : dev.phase} fontSize={16} color="#a7f3d0" />
       </pixiContainer>
     </pixiContainer>
   );

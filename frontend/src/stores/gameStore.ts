@@ -2,14 +2,15 @@
 
 import { create } from "zustand";
 import type { GameState } from "@/lib/types";
-import { createDevSlice, type DevSlice } from "./slices/devSlice";
-import { createLeadSlice, type LeadSlice } from "./slices/leadSlice";
-import { createStudioSlice, type StudioSlice } from "./slices/studioSlice";
+import { createDevSlice, initialDevState, type DevSlice } from "./slices/devSlice";
+import { createLeadSlice, initialLeadState, type LeadSlice } from "./slices/leadSlice";
+import { createStudioSlice, initialStudioState, type StudioSlice } from "./slices/studioSlice";
 
 export type GameStore = DevSlice &
   LeadSlice &
   StudioSlice & {
     processBackendState: (state: GameState) => void;
+    resetSession: () => void;
   };
 
 // Composition root (ported pattern from claude-office's gameStore.ts slice
@@ -26,6 +27,12 @@ export const useGameStore = create<GameStore>()((set, get, api) => ({
     get().updateLead(state.lead);
     get().applyStudioMeta(state);
   },
+
+  // Called when the connected agent is stopped/deleted server-side (a
+  // "session_deleted" WS message) — clears the canvas back to its idle
+  // defaults instead of leaving the last-seen Dev/Lead frozen on screen.
+  resetSession: () =>
+    set({ ...initialDevState, ...initialLeadState, ...initialStudioState }),
 }));
 
 export const selectDevs = (s: GameStore) => s.devs;

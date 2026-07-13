@@ -20,6 +20,12 @@ export function useSpriteTexture(path: string | null): Texture | null {
     let cancelled = false;
     Assets.load(path)
       .then((tex: Texture) => {
+        // Bugfix: the background (1024x559) is upscaled ~1.14x to cover the
+        // 960x640 stage, and every character sprite is scaled too — PixiJS
+        // defaults to bilinear ("linear") filtering, which blurs pixel art
+        // on any non-1:1 scale. "nearest" keeps hard pixel edges at any
+        // scale, which is what a pixel-art game actually wants.
+        tex.source.scaleMode = "nearest";
         if (!cancelled) setTexture(tex);
       })
       .catch(() => {

@@ -17,17 +17,13 @@ character now, not two.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.core.agent_registry import get_agent_registry
+from app.core.agent_spawner import SpawnError, spawn_agent
 from app.core.connection_manager import get_manager
 from app.core.event_processor import get_processor
-from app.models.events import EventType, SessionEvent, SessionEventData
-from app.services.claude_cli_service import ClaudeCliError
-from app.services.providers import get_conversational_provider
 
 router = APIRouter()
 
@@ -49,75 +45,23 @@ class CreateAgentResponse(BaseModel):
 
 @router.post("/agents", response_model=CreateAgentResponse)
 async def create_agent(payload: CreateAgentRequest) -> CreateAgentResponse:
-    provider = get_conversational_provider(payload.provider)
-    if provider is None:
-        raise HTTPException(status_code=400, detail=f"unknown provider: {payload.provider}")
-
-    registry = get_agent_registry()
-    agent = registry.create(
-        provider=payload.provider,
-        department_id=payload.department_id,
-        role=payload.role,
-        name=payload.name,
-    )
-
     try:
-        # bypassPermissions is safe here specifically because this agent
-        # runs in its own isolated agent-workspaces/<id>/ directory, never
-        # the user's real projects — see claude_cli_service.py's module
-        # docstring for why this is NOT done for hook-observed interactive
-        # sessions (chat_bridge.py only sets this for registry-known agents).
-        spawn_result = await provider.spawn(
-            workspace_dir=agent.workspace_dir,
+        agent, first_response = await spawn_agent(
+            provider=payload.provider,
+            department_id=payload.department_id,
+            role=payload.role,
+            name=payload.name,
             initial_prompt=payload.initial_prompt,
-            mcp_config_path=agent.mcp_config_path,
-            permission_mode="bypassPermissions",
         )
-    except ClaudeCliError as exc:
-        agent.status = "error"
-        agent.last_error = str(exc)
-        registry.save()
-        raise HTTPException(status_code=502, detail=f"failed to spawn agent: {exc}") from exc
-
-    session_id = spawn_result.external_session_id
-    if not session_id:
-        agent.status = "error"
-        agent.last_error = "provider did not return a resumable session id"
-        registry.save()
-        raise HTTPException(status_code=502, detail=agent.last_error)
-
-    agent.claude_session_id = session_id
-    agent.status = "active"
-    registry.save()
-
-    manager = get_manager()
-    processor = get_processor(manager)
-
-    # SESSION_START — creates the StateMachine, records working_dir (needed
-    # for every future --resume call, same as any hook-observed session),
-    # department_id, and this agent's role/name/task so its Lead renders as
-    # the spawned character directly (see module docstring).
-    await processor.process(
-        SessionEvent(
-            event_type=EventType.SESSION_START,
-            session_id=session_id,
-            timestamp=datetime.now(UTC),
-            data=SessionEventData(
-                working_dir=agent.workspace_dir,
-                department_id=payload.department_id,
-                reason="spawned",
-                agent_role=payload.role,
-                agent_name=payload.name,
-                summary=payload.initial_prompt,
-            ),
-        )
-    )
+    except SpawnError as exc:
+        status_code = 400 if exc.stage == "provider" else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
     return CreateAgentResponse(
         agent_id=agent.agent_id,
-        session_id=session_id,
+        session_id=agent.claude_session_id,
         status=agent.status,
-        first_response=spawn_result.first_response,
+        first_response=first_response,
     )
 
 
@@ -133,6 +77,26 @@ async def list_agents(department_id: str | None = None) -> list[dict]:
             "name": a.name,
             "status": a.status,
             "sessionId": a.claude_session_id,
+            "lastError": a.last_error,
         }
         for a in registry.list(department_id=department_id)
     ]
+
+
+@router.delete("/agents/{agent_id}")
+async def delete_agent(agent_id: str) -> dict:
+    registry = get_agent_registry()
+    agent = registry.get(agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail="agent not found")
+
+    # No process to kill (see agent_registry.remove's docstring) — just drop
+    # the live StateMachine, if any, so it stops appearing/broadcasting, then
+    # drop the registry entry itself.
+    if agent.claude_session_id:
+        manager = get_manager()
+        processor = get_processor(manager)
+        await processor.remove_session(agent.claude_session_id)
+
+    registry.remove(agent_id)
+    return {"agentId": agent_id, "status": "deleted"}

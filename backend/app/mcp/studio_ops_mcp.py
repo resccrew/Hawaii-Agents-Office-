@@ -50,6 +50,52 @@ async def studio_list_agents(department_id: str | None = None) -> list[dict]:
 
 
 @mcp.tool()
+async def studio_spawn_agent(
+    department_id: str,
+    role: str,
+    name: str,
+    initial_prompt: str,
+    provider: str = "claude",
+) -> dict:
+    """Hire a new teammate — spawn another agent that appears in the office
+    and can be chatted with, coordinated, and assigned tasks. Use this
+    (as the CEO) to build out the team for a goal.
+
+    role must be one of: programmer | game_designer | artist | qa_tester |
+    producer. provider picks the teammate's underlying model — one of:
+    claude (default; the only one with full studio-ops tool access, i.e.
+    it can itself hire/message/manage tasks like you do) | openai | gemini
+    | ollama (these three can chat and be coordinated via studio_send_message
+    but cannot yet call studio_* tools themselves — hire them for
+    plain execution work, not for sub-coordinating a team of their own).
+    initial_prompt is the new agent's first briefing — be specific
+    about what they should build or investigate. Returns the new agent's
+    agent_id and session_id (use the session_id with studio_send_message and
+    the agent_id with studio_update_task's assignee_agent_id). This call
+    blocks until the new agent has finished its first turn, so it may take a
+    few seconds."""
+    async with httpx.AsyncClient(base_url=BACKEND_URL, timeout=300.0) as client:
+        resp = await client.post(
+            "/api/v1/agents",
+            json={
+                "provider": provider,
+                "department_id": department_id,
+                "role": role,
+                "name": name,
+                "initial_prompt": initial_prompt,
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            "agent_id": data.get("agent_id"),
+            "session_id": data.get("session_id"),
+            "status": data.get("status"),
+            "spawned_by": CALLER_AGENT_ID,
+        }
+
+
+@mcp.tool()
 async def studio_send_message(target_session_id: str, message: str) -> dict:
     """Send a chat message to another agent (by its session_id, from
     studio_list_agents). This is a Studio Ops tool, NOT the same as the

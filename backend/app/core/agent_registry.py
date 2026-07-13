@@ -115,6 +115,18 @@ class AgentRegistry:
                 return a
         return None
 
+    def remove(self, agent_id: str) -> bool:
+        """Drops an agent from the registry. Doesn't kill anything at the OS
+        level — a claude-provider agent has no long-lived process (each turn
+        is its own `claude -p --resume` subprocess, see
+        claude_cli_service.py's module docstring); this just makes the agent
+        stop existing as far as /api/v1/agents and future spawns/chat are
+        concerned."""
+        existed = self._agents.pop(agent_id, None) is not None
+        if existed:
+            self.save()
+        return existed
+
     def save(self) -> None:
         """Best-effort JSON snapshot — never raises, so a disk hiccup can't
         break a spawn that otherwise succeeded."""

@@ -15,6 +15,10 @@ node_modules/
 # AgentRegistry/TaskBoard JSON persistence snapshot, same reasoning.
 agent-workspaces/
 state/
+chat-uploads/
+
+# Playwright MCP test debris (screenshots, console logs from manual browser testing)
+.playwright-mcp/
 
 # OS
 .DS_Store

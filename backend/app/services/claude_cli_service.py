@@ -35,6 +35,11 @@ only sets it for Phase-6-spawned agents running in their own isolated
 workspace directory (never for a hook-observed interactive session, where
 silently bypassing permissions on a human's real project would be an actual
 safety regression, not a convenience).
+
+Runs invisibly (a plain background subprocess, stdout/stderr piped and
+parsed programmatically) — deliberately, not a visible terminal window:
+that was tried and reverted, since a real Terminal.app window per chat
+turn/spawn was more noise than value once seen in practice.
 """
 
 from __future__ import annotations
@@ -44,6 +49,8 @@ import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
+
+from app.services.providers.base import ProviderError
 
 ChunkKind = Literal["text_delta", "turn_complete", "error"]
 
@@ -55,7 +62,7 @@ class ChatChunk:
     raw: dict[str, Any] | None = None
 
 
-class ClaudeCliError(RuntimeError):
+class ClaudeCliError(ProviderError):
     """Raised when the CLI is missing, exits non-zero, or times out."""
 
 
@@ -67,6 +74,8 @@ async def send_headless_message(
     timeout_seconds: float = 120.0,
     mcp_config_path: str | None = None,
     permission_mode: str | None = None,
+    model: str | None = None,
+    effort: str | None = None,
 ) -> AsyncIterator[ChatChunk]:
     """Yield ChatChunks parsed from `claude -p --resume` stream-json output.
 
@@ -82,6 +91,11 @@ async def send_headless_message(
     `permission_mode`: when set, passes `--permission-mode <value>` (e.g.
     "bypassPermissions"). See module docstring — caller's responsibility to
     decide when this is safe.
+
+    `model`/`effort`: passed straight through as `--model`/`--effort`.
+    Chosen per-message from ChatWindow.tsx's selector, not fixed at spawn —
+    `--resume` doesn't lock a session to whatever model created it, each
+    invocation is free to pick.
     """
     args = [
         "claude",
@@ -97,6 +111,10 @@ async def send_headless_message(
         args += ["--mcp-config", mcp_config_path]
     if permission_mode:
         args += ["--permission-mode", permission_mode]
+    if model:
+        args += ["--model", model]
+    if effort:
+        args += ["--effort", effort]
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -172,6 +190,8 @@ async def spawn_new_session(
     timeout_seconds: float = 180.0,
     mcp_config_path: str | None = None,
     permission_mode: str | None = None,
+    model: str | None = None,
+    effort: str | None = None,
 ) -> SpawnedSession:
     """Create a brand-new headless session (Phase 6 Add-Agent flow) — no
     --resume, since there's nothing to resume yet. Uses --output-format
@@ -185,6 +205,10 @@ async def spawn_new_session(
         args += ["--mcp-config", mcp_config_path]
     if permission_mode:
         args += ["--permission-mode", permission_mode]
+    if model:
+        args += ["--model", model]
+    if effort:
+        args += ["--effort", effort]
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,

@@ -18,10 +18,14 @@ interface SessionChatState {
 
 interface ChatStore {
   sessions: Map<string, SessionChatState>;
-  activeSessionId: string | null;
+  // Multiple chat windows open at once. Array order IS the z-order: the
+  // last entry is the front-most/focused window. openPanel appends (or
+  // re-focuses an already-open one); focusPanel moves a window to the end.
+  openSessions: string[];
   openPanel: (sessionId: string) => void;
-  closePanel: () => void;
-  appendUserMessage: (sessionId: string, text: string) => void;
+  closePanel: (sessionId: string) => void;
+  focusPanel: (sessionId: string) => void;
+  appendUserMessage: (sessionId: string, text: string, attachmentNames?: string[]) => void;
   handleChatWsMessage: (sessionId: string, msg: Record<string, unknown>) => void;
 }
 
@@ -31,17 +35,35 @@ interface ChatStore {
 // should reconcile).
 export const useChatStore = create<ChatStore>()((set, get) => ({
   sessions: new Map(),
-  activeSessionId: null,
+  openSessions: [],
 
-  openPanel: (sessionId) => set({ activeSessionId: sessionId }),
-  closePanel: () => set({ activeSessionId: null }),
+  openPanel: (sessionId) =>
+    set((state) => ({
+      // Already open → just bring to front; otherwise add on top.
+      openSessions: [...state.openSessions.filter((id) => id !== sessionId), sessionId],
+    })),
+  closePanel: (sessionId) =>
+    set((state) => ({ openSessions: state.openSessions.filter((id) => id !== sessionId) })),
+  focusPanel: (sessionId) =>
+    set((state) =>
+      state.openSessions.at(-1) === sessionId
+        ? state
+        : { openSessions: [...state.openSessions.filter((id) => id !== sessionId), sessionId] },
+    ),
 
-  appendUserMessage: (sessionId, text) =>
+  appendUserMessage: (sessionId, text, attachmentNames) =>
     set((state) => {
       const sessions = new Map(state.sessions);
       const existing = sessions.get(sessionId) ?? { messages: [], status: "idle" as const };
+      // Mirrors chat_bridge.py's own "📎 filename" note on the persisted/
+      // broadcast side — same format, so a live-typed message and one
+      // recovered via chat_history replay after a reconnect read identically.
+      const displayText =
+        attachmentNames && attachmentNames.length > 0
+          ? `${text}${text ? "\n\n" : ""}📎 ${attachmentNames.join(", ")}`
+          : text;
       sessions.set(sessionId, {
-        messages: [...existing.messages, { id: crypto.randomUUID(), role: "user", text }],
+        messages: [...existing.messages, { id: crypto.randomUUID(), role: "user", text: displayText }],
         status: existing.status,
       });
       return { sessions };
@@ -54,6 +76,28 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
     let status: ChatTurnStatus = existing.status;
 
     switch (msg.type) {
+      case "chat_history": {
+        // Sent once by the backend right after a chat WS connects, replaying
+        // sm.conversation (persisted to disk — see conversation_store.py) so
+        // a fresh connection never starts blank: first time opening this
+        // agent's chat, reconnecting after a network blip, or reconnecting
+        // after a backend restart all used to silently show nothing for
+        // everything that already happened. Backend is authoritative for
+        // anything it has recorded, but a turn already streaming in on THIS
+        // connection can't be in that snapshot yet (its response_text isn't
+        // recorded until the turn completes) — keep any local message still
+        // mid-stream so a reconnect mid-reply doesn't cut it off.
+        const inFlight = existing.messages.filter((m) => m.status === "streaming");
+        const raw = Array.isArray(msg.messages) ? (msg.messages as Record<string, unknown>[]) : [];
+        const history: ChatLogMessage[] = raw.map((m) => ({
+          id: String(m.id ?? crypto.randomUUID()),
+          role: m.role === "user" || m.role === "assistant" ? m.role : "system",
+          text: String(m.text ?? ""),
+        }));
+        sessions.set(sessionId, { messages: [...history, ...inFlight], status: existing.status });
+        set({ sessions });
+        return;
+      }
       case "chat_queued":
         status = "queued";
         messages.push({
@@ -116,4 +160,4 @@ const EMPTY_SESSION_STATE: SessionChatState = { messages: [], status: "idle" };
 
 export const selectChatSession = (sessionId: string) => (state: ChatStore) =>
   state.sessions.get(sessionId) ?? EMPTY_SESSION_STATE;
-export const selectActiveChatSessionId = (state: ChatStore) => state.activeSessionId;
+export const selectOpenSessions = (state: ChatStore) => state.openSessions;
