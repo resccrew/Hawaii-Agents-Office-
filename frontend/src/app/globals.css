@@ -31,10 +31,10 @@
   --text-inv: #2a0f1e; /* on sunset fills */
 
   /* ---- sunset (warm brand / primary action) ---- */
-  --sunset: #fb7185;
-  --sunset-2: #f97316;
-  --sunset-weak: rgba(251, 113, 133, 0.14);
-  --sunset-ring: rgba(251, 113, 133, 0.45);
+  --sunset: #ff3d5a;
+  --sunset-2: #f96800;
+  --sunset-weak: rgba(255, 61, 90, 0.16);
+  --sunset-ring: rgba(255, 61, 90, 0.50);
 
   /* ---- ocean (cool accent / focus / active) ---- */
   --ocean: #2dd4bf;
@@ -43,8 +43,8 @@
   --ocean-ring: rgba(45, 212, 191, 0.42);
 
   /* ---- brand gradients ---- */
-  --grad-brand: linear-gradient(100deg, #fb7185, #f97316 48%, #2dd4bf);
-  --grad-sunset: linear-gradient(135deg, #fb7185, #f97316);
+  --grad-brand: linear-gradient(100deg, #ff3d5a, #f96800 48%, #2dd4bf);
+  --grad-sunset: linear-gradient(135deg, #ff3d5a, #f96800);
   --grad-ocean: linear-gradient(135deg, #2dd4bf, #14b8a6);
 
   /* ---- semantic ---- */
@@ -72,7 +72,7 @@
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 14px 32px -10px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-pop: 0 28px 64px -18px rgba(0, 0, 0, 0.8), 0 10px 24px rgba(0, 0, 0, 0.5);
-  --glow-sunset: 0 6px 22px -6px rgba(251, 113, 133, 0.5);
+  --glow-sunset: 0 6px 22px -6px rgba(255, 61, 90, 0.62);
   --glow-ocean: 0 6px 22px -6px rgba(45, 212, 191, 0.45);
 
   /* ---- type ---- */
@@ -104,7 +104,7 @@ body {
   margin: 0;
   /* subtle warm aurora behind the whole shell */
   background:
-    radial-gradient(1200px 600px at 12% -10%, rgba(251, 113, 133, 0.08), transparent 60%),
+    radial-gradient(1200px 600px at 12% -10%, rgba(255, 61, 90, 0.10), transparent 60%),
     radial-gradient(1000px 600px at 100% 110%, rgba(45, 212, 191, 0.07), transparent 55%),
     var(--bg-0);
   color: var(--text-1);
@@ -242,7 +242,7 @@ body {
     var(--grad-brand) top left / 100% 2px no-repeat,
     linear-gradient(180deg, #1c1436, #150d28);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 0 rgba(251, 113, 133, 0.12), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 1px 0 rgba(255, 61, 90, 0.16), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
 }
 
 .toolbar-title {
@@ -255,7 +255,7 @@ body {
 .toolbar-logo {
   font-size: 19px;
   line-height: 1;
-  filter: drop-shadow(0 0 7px rgba(251, 113, 133, 0.45));
+  filter: drop-shadow(0 0 7px rgba(255, 61, 90, 0.58));
 }
 .toolbar-wordmark {
   font-family: var(--font-pixel);
@@ -373,7 +373,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 11px 12px;
-  background: linear-gradient(180deg, rgba(251, 113, 133, 0.08), transparent), var(--bg-2);
+  background: linear-gradient(180deg, rgba(255, 61, 90, 0.10), transparent), var(--bg-2);
   border-bottom: 1px solid transparent;
   border-image: var(--grad-brand) 1;
   color: var(--text-1);
@@ -486,7 +486,7 @@ body {
   color: var(--sunset);
 }
 .chat-msg-user .chat-msg-bubble {
-  background: linear-gradient(135deg, rgba(251, 113, 133, 0.2), rgba(249, 115, 22, 0.16));
+  background: linear-gradient(135deg, rgba(255, 61, 90, 0.24), rgba(249, 104, 0, 0.20));
   border-color: var(--sunset-ring);
   border-bottom-right-radius: var(--r-xs);
   color: var(--text-1);

@@ -142,6 +142,33 @@ class StateMachine:
                 )
             )
 
+    def _find_dev(self, agent_id: str | None, native_agent_id: str | None) -> Dev | None:
+        """Resolve a dev by agent_id or native_agent_id, tolerating cross-field
+        mismatch between SUBAGENT_START and SUBAGENT_STOP events.
+
+        The bug: SUBAGENT_START may store the dev under ``agent_id`` (e.g. the
+        tool-use id), but SUBAGENT_STOP sometimes only carries ``native_agent_id``
+        (and vice-versa), causing the simple ``agent_id in self.devs`` check to
+        miss the entry and leave the sprite stuck on screen.
+
+        Strategy (fastest to slowest):
+        1. Direct dict key lookup by agent_id.
+        2. Direct dict key lookup by native_agent_id.
+        3. Linear scan comparing dev.native_id (handles the case where START
+           stored under agent_id but STOP only carries native_agent_id).
+        4. Linear scan comparing dev.id (handles the reverse mismatch)."""
+        if agent_id and agent_id in self.devs:
+            return self.devs[agent_id]
+        if native_agent_id and native_agent_id in self.devs:
+            return self.devs[native_agent_id]
+        for dev in self.devs.values():
+            if native_agent_id and dev.native_id == native_agent_id:
+                return dev
+        for dev in self.devs.values():
+            if agent_id and (dev.id == agent_id or dev.native_id == agent_id):
+                return dev
+        return None
+
     def _apply_agent(self, event: AgentEvent) -> None:
         agent_id = event.data.agent_id or event.data.native_agent_id
         if event.event_type == EventType.SUBAGENT_START and agent_id:
@@ -158,9 +185,14 @@ class StateMachine:
                 parent_session_id=self.session_id,
             )
             self.lead.state = LeadState.DELEGATING
-        elif event.event_type == EventType.SUBAGENT_STOP and agent_id and agent_id in self.devs:
-            self.devs[agent_id].state = DevState.LEAVING
-            self.devs[agent_id].current_task = event.data.result_summary
+        elif event.event_type == EventType.SUBAGENT_STOP:
+            # Use _find_dev instead of a plain dict lookup so the sprite is
+            # correctly marked LEAVING even when SUBAGENT_STOP carries a
+            # different id field than the one SUBAGENT_START used as key.
+            dev = self._find_dev(event.data.agent_id, event.data.native_agent_id)
+            if dev is not None:
+                dev.state = DevState.LEAVING
+                dev.current_task = event.data.result_summary
         elif event.event_type == EventType.AGENT_UPDATE and agent_id and agent_id in self.devs:
             if event.data.task_description:
                 self.devs[agent_id].current_task = event.data.task_description
