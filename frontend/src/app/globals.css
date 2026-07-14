@@ -1,24 +1,92 @@
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Press+Start+2P&display=swap");
 
-/* ================= design tokens ================= */
+/* =====================================================================
+   Hawaii Agents Office — "Tropical Control Room" design system
+   ---------------------------------------------------------------------
+   An elevated evolution of the original beach/sunset identity, not a
+   replacement: warm plum-dusk surfaces that cohere with the wooden beach
+   office art, a sunset -> ocean brand gradient used with restraint, a
+   pixel-font wordmark kept as a brand signature, and premium craft on top
+   (hairline borders, soft glows, glassy panels, layered elevation, real
+   body type in Inter, machine data in JetBrains Mono). Committed to a
+   single warm-dark theme on purpose — it frames the dark, warm pixel scene.
+   ===================================================================== */
+
 :root {
-  --sand: #f4d9a0;
-  --sand-dark: #d9b876;
-  --ocean: #2dd4bf;
-  --ocean-deep: #0e7490;
-  --sunset: #fb7185;
-  --sunset-deep: #f97316;
-  --amber: #f59e0b;
-  --lime: #22c55e;
-  --red: #ef4444;
-  --dusk: #1a1030;
-  --dusk-deep: #120a22;
-  --dusk-panel: #241a3d;
-  --dusk-soft: #2e2250;
-  --ink: #2b1b3d;
+  /* ---- warm plum-dusk surfaces ---- */
+  --bg-0: #0e0819; /* app base */
+  --bg-1: #17102a; /* panels, toolbar, chat windows */
+  --bg-2: #1f1738; /* cards, inputs, chips */
+  --bg-3: #2a2050; /* hover / raised */
+  --bg-4: #352a63; /* active / pressed */
 
-  --toolbar-h: 60px;
-  --panel-w: 308px;
+  /* ---- borders (warm-tinted hairlines) ---- */
+  --border: rgba(245, 225, 255, 0.10);
+  --border-strong: rgba(245, 225, 255, 0.2);
+
+  /* ---- text ---- */
+  --text-1: #f6eefb; /* primary */
+  --text-2: #c7b8dd; /* secondary */
+  --text-3: #8f7fb0; /* muted / meta */
+  --text-inv: #2a0f1e; /* on sunset fills */
+
+  /* ---- sunset (warm brand / primary action) ---- */
+  --sunset: #fb7185;
+  --sunset-2: #f97316;
+  --sunset-weak: rgba(251, 113, 133, 0.14);
+  --sunset-ring: rgba(251, 113, 133, 0.45);
+
+  /* ---- ocean (cool accent / focus / active) ---- */
+  --ocean: #2dd4bf;
+  --ocean-strong: #14b8a6;
+  --ocean-weak: rgba(45, 212, 191, 0.13);
+  --ocean-ring: rgba(45, 212, 191, 0.42);
+
+  /* ---- brand gradients ---- */
+  --grad-brand: linear-gradient(100deg, #fb7185, #f97316 48%, #2dd4bf);
+  --grad-sunset: linear-gradient(135deg, #fb7185, #f97316);
+  --grad-ocean: linear-gradient(135deg, #2dd4bf, #14b8a6);
+
+  /* ---- semantic ---- */
+  --success: #34d399;
+  --success-weak: rgba(52, 211, 153, 0.14);
+  --warning: #fbbf24;
+  --warning-weak: rgba(251, 191, 36, 0.15);
+  --danger: #fb7185;
+  --danger-weak: rgba(251, 113, 133, 0.15);
+  --info: #38bdf8;
+  --info-weak: rgba(56, 189, 248, 0.15);
+  --violet: #c084fc;
+  --violet-weak: rgba(192, 132, 252, 0.15);
+
+  /* ---- radii ---- */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-full: 999px;
+
+  /* ---- elevation (soft, warm-tinted) ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 14px 32px -10px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 28px 64px -18px rgba(0, 0, 0, 0.8), 0 10px 24px rgba(0, 0, 0, 0.5);
+  --glow-sunset: 0 6px 22px -6px rgba(251, 113, 133, 0.5);
+  --glow-ocean: 0 6px 22px -6px rgba(45, 212, 191, 0.45);
+
+  /* ---- type ---- */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-pixel: "Press Start 2P", var(--font-sans);
+
+  /* ---- motion ---- */
+  --t-fast: 110ms cubic-bezier(0.4, 0, 0.2, 1);
+  --t: 170ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- layout ---- */
+  --toolbar-h: 58px;
+  --panel-w: 320px;
   --panel-w-left: 300px;
 }
 
@@ -34,42 +102,52 @@ body {
 
 body {
   margin: 0;
-  background: var(--dusk-deep);
-  color: var(--sand);
-  font-family: "Press Start 2P", "Courier New", monospace;
-  font-size: 10px;
+  /* subtle warm aurora behind the whole shell */
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(251, 113, 133, 0.08), transparent 60%),
+    radial-gradient(1000px 600px at 100% 110%, rgba(45, 212, 191, 0.07), transparent 55%),
+    var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.006em;
 }
 
 ::selection {
-  background: var(--sunset);
-  color: var(--ink);
+  background: var(--sunset-weak);
+  color: var(--text-1);
 }
 
 :focus-visible {
-  outline: 3px dashed var(--ocean);
+  outline: 2px solid var(--ocean);
   outline-offset: 2px;
+  border-radius: var(--r-sm);
 }
 
-/* pixel scrollbars */
+/* thin, unobtrusive scrollbars */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--dusk);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--ocean-deep);
-  border: 2px solid var(--dusk);
+  background: var(--bg-3);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: var(--r-full);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--ocean);
+  background: var(--bg-4);
+  background-clip: padding-box;
 }
 
-/* Straight pixel border — no jagged corners. */
 .pixel-frame {
-  border: 4px solid var(--ink);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
+  border-radius: var(--r-md);
 }
 
 @keyframes pulse-dot {
@@ -78,65 +156,77 @@ body {
     opacity: 1;
   }
   50% {
-    opacity: 0.35;
+    opacity: 0.4;
   }
 }
 
-/* Shared status dot (toolbar chip, roster cards, chat header). */
+/* Shared status dot with a soft halo ring. */
 .status-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   flex: 0 0 auto;
-  border: 2px solid rgba(0, 0, 0, 0.55);
+  border-radius: var(--r-full);
   display: inline-block;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 }
 .status-dot-active {
-  background: var(--lime);
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-weak);
 }
 .status-dot-starting {
-  background: var(--amber);
-  animation: pulse-dot 1.2s ease-in-out infinite;
+  background: var(--warning);
+  box-shadow: 0 0 0 3px var(--warning-weak);
+  animation: pulse-dot 1.3s ease-in-out infinite;
 }
 .status-dot-error {
-  background: var(--red);
+  background: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-weak);
 }
 .chat-dot-idle {
   background: var(--ocean);
+  box-shadow: 0 0 0 3px var(--ocean-weak);
 }
 .chat-dot-queued {
-  background: var(--amber);
-  animation: pulse-dot 1.2s ease-in-out infinite;
+  background: var(--warning);
+  box-shadow: 0 0 0 3px var(--warning-weak);
+  animation: pulse-dot 1.3s ease-in-out infinite;
 }
 .chat-dot-streaming {
-  background: var(--lime);
-  animation: pulse-dot 0.8s ease-in-out infinite;
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-weak);
+  animation: pulse-dot 0.9s ease-in-out infinite;
 }
 .chat-dot-error {
-  background: var(--red);
+  background: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-weak);
 }
 
-/* Shared empty-state block (tasks, roster, chat log). */
+/* Shared empty-state block. */
 .panel-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 28px 12px;
+  gap: 8px;
+  padding: 40px 20px;
   text-align: center;
-  color: var(--sand-dark);
-  font-size: 9px;
+  color: var(--text-3);
+  font-size: 12px;
   line-height: 1.6;
 }
 .panel-empty-icon {
-  font-size: 18px;
-  color: var(--ocean-deep);
+  font-size: 22px;
+  opacity: 0.55;
+  margin-bottom: 2px;
 }
 .panel-empty-hint {
-  font-size: 8px;
-  opacity: 0.7;
+  font-size: 11px;
+  opacity: 0.8;
+  max-width: 210px;
 }
 
-/* ================= toolbar ================= */
+/* ============================== toolbar ============================== */
+/* Warm dark bar with a 2px sunset->ocean brand ribbon along the very top
+   and a faint sunset glow beneath. */
 .toolbar {
   position: fixed;
   top: 0;
@@ -145,20 +235,37 @@ body {
   height: var(--toolbar-h);
   z-index: 40;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 0 20px;
-  background: linear-gradient(90deg, var(--sunset-deep), var(--sunset) 55%, var(--ocean));
-  border-bottom: 4px solid var(--ink);
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+  padding: 0 16px;
+  background:
+    var(--grad-brand) top left / 100% 2px no-repeat,
+    linear-gradient(180deg, #1c1436, #150d28);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(251, 113, 133, 0.12), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
 }
 
 .toolbar-title {
-  color: var(--ink);
-  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.35);
-  letter-spacing: 1.5px;
-  font-size: 14px;
-  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+.toolbar-logo {
+  font-size: 19px;
+  line-height: 1;
+  filter: drop-shadow(0 0 7px rgba(251, 113, 133, 0.45));
+}
+.toolbar-wordmark {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  background: var(--grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .toolbar-spacer {
@@ -168,47 +275,44 @@ body {
 .toolbar-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(26, 16, 48, 0.85);
-  border: 3px solid var(--ink);
-  color: var(--sand);
-  padding: 7px 12px;
-  font-size: 9px;
-  letter-spacing: 0.5px;
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+  gap: 7px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--r-full);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
+/* secondary toolbar buttons (e.g. Settings) */
 .toolbar button {
-  background: var(--ocean-deep);
-  border: 3px solid var(--ink);
-  color: var(--sand);
-  padding: 9px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 8px 14px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
-  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--r-md);
+  text-transform: capitalize;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
 }
 .toolbar button:hover {
-  background: var(--ocean);
-  color: var(--ink);
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  background: var(--bg-3);
+  color: var(--text-1);
+  border-color: var(--border-strong);
 }
 .toolbar button:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+  background: var(--bg-4);
 }
 
-/* ================= office stage (cover-fit, docked between two panels) === */
-/* The wrapper hugs the space between the two docked side panels (activity
-   log on the left, team/tasks on the right — mirrors claude-office's
-   three-column layout); the canvas frame inside is sized by useFitSize in
-   COVER mode — it overflows the wrapper symmetrically and gets clipped, so
-   the office art reaches every edge with no letterbox bands. The scanline
-   backdrop only ever shows in the extreme-aspect fallback (MAX_OVERSCAN cap
-   in useFitSize). */
+/* ========================= office stage ============================= */
+/* Full-bleed office between the docked panels, seated with an inner
+   vignette so the warm pixel scene reads as a live "viewport". */
 .game-stage-wrapper {
   position: fixed;
   top: var(--toolbar-h);
@@ -219,17 +323,10 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: repeating-linear-gradient(
-    0deg,
-    var(--dusk-deep) 0px,
-    var(--dusk-deep) 3px,
-    #17102b 3px,
-    #17102b 4px
-  );
+  background: var(--bg-0);
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.5), inset 0 0 140px rgba(0, 0, 0, 0.4);
 }
 
-/* Sized inline by useFitSize; borderless — it's full-bleed scenery now,
-   and also the positioning context for the chat popup. */
 .game-canvas-frame {
   position: relative;
   flex: 0 0 auto;
@@ -237,12 +334,6 @@ body {
 }
 
 .game-stage-wrapper canvas {
-  /* min-width/min-height: 0 override the flex-item default of
-     `min-width: auto`, which for a replaced element like <canvas>
-     resolves to its intrinsic size (STAGE_WIDTH/HEIGHT × devicePixelRatio
-     on Retina) — without this the canvas refuses to scale down to its
-     frame and overflows. Bit us on real Retina Macs, invisible in
-     dpr-1 headless testing. */
   min-width: 0;
   min-height: 0;
   width: 100% !important;
@@ -251,40 +342,43 @@ body {
   image-rendering: pixelated;
 }
 
-/* ================= chat windows (multi, draggable + resizable) ======= */
+/* =============== chat windows (multi, draggable + resizable) ========= */
 .chat-window {
   position: absolute;
-  background: var(--dusk-panel);
-  border: 4px solid var(--sunset);
+  background: var(--bg-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-pop);
 }
-/* Bottom-right resize grip — the little pixel corner. */
 .chat-window-resize {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 18px;
-  height: 18px;
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
   cursor: nwse-resize;
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent 0 3px,
-    var(--sunset) 3px 4px
-  );
+  border-right: 2px solid var(--sunset-ring);
+  border-bottom: 2px solid var(--sunset-ring);
+  border-bottom-right-radius: var(--r-md);
   touch-action: none;
+  opacity: 0.8;
 }
 
+/* Header carries a subtle sunset wash + a gradient hairline underline. */
 .chat-panel-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 10px;
-  background: linear-gradient(90deg, var(--sunset-deep), var(--sunset));
-  color: var(--ink);
-  font-size: 9px;
+  padding: 11px 12px;
+  background: linear-gradient(180deg, rgba(251, 113, 133, 0.08), transparent), var(--bg-2);
+  border-bottom: 1px solid transparent;
+  border-image: var(--grad-brand) 1;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 600;
   cursor: grab;
   user-select: none;
   touch-action: none;
@@ -295,7 +389,7 @@ body {
 .chat-panel-title {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -303,73 +397,83 @@ body {
   white-space: nowrap;
 }
 .chat-panel-grip {
-  opacity: 0.55;
-  font-size: 11px;
-  letter-spacing: 2px;
+  color: var(--text-3);
+  opacity: 0.6;
+  font-size: 12px;
+  letter-spacing: 1px;
 }
 .chat-panel-header button {
-  background: var(--dusk);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 3px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
   cursor: pointer;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 13px;
+  border-radius: var(--r-sm);
+  transition: background var(--t-fast), color var(--t-fast);
 }
 .chat-panel-header button:hover {
-  background: var(--sunset-deep);
-  color: var(--ink);
+  background: var(--sunset-weak);
+  color: var(--sunset);
 }
 
 .chat-panel-status {
   padding: 7px 12px;
-  font-size: 8px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--ocean);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
-  background: rgba(45, 212, 191, 0.08);
+  background: var(--ocean-weak);
+  border-bottom: 1px solid var(--border);
 }
 .chat-panel-status-queued {
-  color: var(--amber);
-  background: rgba(245, 158, 11, 0.08);
+  color: var(--warning);
+  background: var(--warning-weak);
 }
 .chat-panel-status-streaming {
-  color: var(--lime);
-  background: rgba(34, 197, 94, 0.08);
+  color: var(--success);
+  background: var(--success-weak);
 }
 .chat-panel-status-error {
-  color: var(--red);
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  background: var(--danger-weak);
 }
 
 .chat-panel-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: var(--dusk);
+  gap: 12px;
+  background: var(--bg-1);
 }
 
 .chat-msg {
-  font-size: 9px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.55;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 92%;
+  max-width: 90%;
 }
 .chat-msg-role {
-  font-size: 7px;
+  font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--sunset);
-  opacity: 0.9;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
 }
 .chat-msg-bubble {
-  padding: 8px 10px;
-  border: 2px solid var(--ink);
-  background: var(--dusk-soft);
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-2);
+  color: var(--text-1);
   word-break: break-word;
   white-space: pre-wrap;
 }
@@ -379,14 +483,22 @@ body {
   text-align: right;
 }
 .chat-msg-user .chat-msg-role {
-  color: var(--ocean);
+  color: var(--sunset);
 }
 .chat-msg-user .chat-msg-bubble {
-  background: var(--ocean-deep);
-  color: #eafffb;
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.2), rgba(249, 115, 22, 0.16));
+  border-color: var(--sunset-ring);
+  border-bottom-right-radius: var(--r-xs);
+  color: var(--text-1);
 }
 .chat-msg-assistant {
   align-self: flex-start;
+}
+.chat-msg-assistant .chat-msg-role {
+  color: var(--ocean);
+}
+.chat-msg-assistant .chat-msg-bubble {
+  border-bottom-left-radius: var(--r-xs);
 }
 .chat-msg-system {
   align-self: center;
@@ -399,141 +511,177 @@ body {
 .chat-msg-system .chat-msg-bubble {
   background: none;
   border: none;
-  color: var(--sand-dark);
-  font-size: 8px;
-  opacity: 0.85;
-  padding: 0 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  padding: 2px 8px;
 }
 
-/* Drag-and-drop attach: the messages pane doubles as a drop zone (dashed
-   highlight + hint overlay while a file is dragged over it). */
 .chat-panel-messages-dragover {
-  outline: 3px dashed var(--ocean);
-  outline-offset: -3px;
+  outline: 2px dashed var(--ocean);
+  outline-offset: -6px;
+  background: var(--ocean-weak);
 }
 .chat-panel-drop-hint {
   position: sticky;
   bottom: 0;
   text-align: center;
-  padding: 8px;
+  padding: 10px;
   color: var(--ocean);
-  font-size: 9px;
-  background: rgba(45, 212, 191, 0.12);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--ocean-weak);
+  border-radius: var(--r-md);
   pointer-events: none;
 }
 
 .chat-panel-attach-error {
-  padding: 6px 10px 0;
-  color: var(--red);
-  font-size: 8px;
-  background: var(--dusk-panel);
+  padding: 8px 12px 0;
+  color: var(--danger);
+  font-size: 11px;
+  background: var(--bg-1);
 }
 
 .chat-panel-attachments {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 8px 10px 0;
-  background: var(--dusk-panel);
+  padding: 10px 12px 0;
+  background: var(--bg-1);
 }
 .chat-attachment-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--dusk-soft);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 4px 6px;
-  font-size: 8px;
-  max-width: 160px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 4px 6px 4px 9px;
+  font-size: 11px;
+  border-radius: var(--r-full);
+  max-width: 170px;
 }
 .chat-attachment-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
   background: none;
   border: none;
-  color: var(--sunset);
+  color: var(--text-3);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1;
   padding: 0;
+  border-radius: var(--r-full);
+  transition: background var(--t-fast), color var(--t-fast);
 }
 .chat-attachment-chip button:hover {
-  color: var(--red);
+  background: var(--danger-weak);
+  color: var(--danger);
 }
 
 .chat-attach-button {
   flex: 0 0 auto;
-  background: var(--dusk-soft);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 0 11px;
   cursor: pointer;
-  font-size: 12px;
-  transition: background 0.15s ease;
+  font-size: 15px;
+  border-radius: var(--r-md);
+  transition: background var(--t-fast), border-color var(--t-fast);
 }
 .chat-attach-button:hover {
-  background: var(--ocean-deep);
+  background: var(--bg-3);
+  border-color: var(--border-strong);
 }
 
-/* Per-message model/effort picker (Claude agents only) — sits right above
-   the input row so a choice made here obviously applies to the NEXT send,
-   not the whole conversation. */
 .chat-panel-model-row {
   display: flex;
-  gap: 6px;
-  padding: 6px 10px 0;
-  background: var(--dusk-panel);
+  gap: 8px;
+  padding: 10px 12px 0;
+  background: var(--bg-1);
 }
 .chat-panel-model-row select {
   flex: 1;
   min-width: 0;
-  background: var(--dusk);
-  border: 2px solid var(--ink);
-  color: var(--sand-dark);
-  padding: 5px 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 7px 8px;
   font-family: inherit;
-  font-size: 8px;
+  font-size: 11px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color var(--t-fast);
+}
+.chat-panel-model-row select:hover {
+  border-color: var(--border-strong);
 }
 
 .chat-panel-input {
   display: flex;
   gap: 8px;
-  padding: 10px;
-  border-top: 3px solid var(--sunset);
-  background: var(--dusk-panel);
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
 }
-.chat-panel-input input {
+
+/* shared dark text-input treatment */
+.chat-panel-input input,
+.task-board-input input {
   flex: 1;
   min-width: 0;
-  background: var(--sand);
-  border: 2px solid var(--ink);
-  color: var(--ink);
-  padding: 9px 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 10px 12px;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 13px;
+  border-radius: var(--r-md);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
-.chat-panel-input input::placeholder {
-  color: #8a6f42;
+.chat-panel-input input::placeholder,
+.task-board-input input::placeholder {
+  color: var(--text-3);
 }
-.chat-panel-input button {
-  background: var(--ocean-deep);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 8px 14px;
+.chat-panel-input input:focus,
+.task-board-input input:focus {
+  outline: none;
+  border-color: var(--ocean);
+  box-shadow: 0 0 0 3px var(--ocean-weak);
+}
+
+/* primary send button — sunset gradient (excludes the attach icon button,
+   which shares this row but is styled by .chat-attach-button). */
+.chat-panel-input button:not(.chat-attach-button),
+.task-board-input button {
+  background: var(--grad-sunset);
+  border: 1px solid transparent;
+  color: var(--text-inv);
+  padding: 0 16px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 9px;
-  transition: background 0.15s ease;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--r-md);
+  transition: box-shadow var(--t-fast), opacity var(--t-fast), filter var(--t-fast);
 }
-.chat-panel-input button:hover:not(:disabled) {
-  background: var(--ocean);
-  color: var(--ink);
+.chat-panel-input button:not(.chat-attach-button):hover:not(:disabled),
+.task-board-input button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--glow-sunset);
 }
-.chat-panel-input button:disabled {
-  opacity: 0.45;
+.chat-panel-input button:not(.chat-attach-button):disabled {
+  opacity: 0.4;
   cursor: default;
 }
 
-/* ================= side panel (team + tasks) ================= */
+/* ===================== right panel (team + tasks) =================== */
 .side-panel {
   position: fixed;
   top: var(--toolbar-h);
@@ -541,21 +689,14 @@ body {
   bottom: 0;
   width: var(--panel-w);
   z-index: 30;
-  background: var(--dusk-panel);
-  border-left: 4px solid var(--ink);
+  background: var(--bg-1);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* ================= left panel (activity log) ================= */
-/* Mirrors .side-panel on the opposite edge — adapted from claude-office's
-   left-hand session browser, but since we don't have a "past sessions"
-   concept (agents are live/registered, not a session history to browse),
-   this docks the studio-wide event feed here instead: every hook event,
-   tool call, and chat turn any agent produces, streamed live. Claiming
-   this edge (in addition to the existing right panel) is also what makes
-   the office canvas itself smaller, as requested. */
+/* ===================== left panel (activity log) =================== */
 .side-panel-left {
   position: fixed;
   top: var(--toolbar-h);
@@ -563,8 +704,8 @@ body {
   bottom: 0;
   width: var(--panel-w-left);
   z-index: 30;
-  background: var(--dusk-panel);
-  border-right: 4px solid var(--ink);
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -580,19 +721,25 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 13px 14px;
-  background: linear-gradient(90deg, var(--ocean-deep), var(--ocean));
-  color: var(--ink);
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  border-bottom: 4px solid var(--ink);
+  padding: 15px 16px;
+  background: var(--bg-1);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
 }
 .activity-log-count {
-  background: var(--dusk);
-  color: var(--sand);
-  border: 2px solid var(--ink);
-  padding: 2px 7px;
-  font-size: 9px;
+  background: var(--bg-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--r-full);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 .activity-log-list {
   flex: 1;
@@ -604,92 +751,103 @@ body {
 }
 
 .log-entry {
-  background: var(--dusk);
-  border: 2px solid var(--ink);
-  border-left: 4px solid var(--ocean-deep);
-  padding: 7px 8px;
-  font-size: 9px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 9px 11px;
+  font-size: 12px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.log-entry:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-3);
 }
 .log-entry-top {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   flex-wrap: wrap;
 }
 .log-entry-time {
-  color: var(--sand-dark);
-  font-size: 8px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 .log-entry-agent {
-  color: var(--ocean);
-  font-size: 8px;
+  color: var(--sunset);
+  font-size: 11px;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .log-entry-summary {
-  color: var(--sand);
+  color: var(--text-2);
   line-height: 1.5;
   word-break: break-word;
 }
 
+/* Log type badges — soft tinted pills. */
 .log-type-badge {
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 7px;
-  padding: 2px 5px;
-  border: 2px solid var(--ink);
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--r-full);
   flex-shrink: 0;
 }
 .log-type-session {
-  background: var(--sunset-deep);
-  color: var(--ink);
+  background: var(--info-weak);
+  color: var(--info);
 }
 .log-type-tool {
-  background: var(--amber);
-  color: var(--ink);
+  background: var(--warning-weak);
+  color: var(--warning);
 }
 .log-type-prompt {
-  background: var(--ocean);
-  color: var(--ink);
+  background: var(--ocean-weak);
+  color: var(--ocean);
 }
 .log-type-chat {
-  background: var(--ocean-deep);
-  color: var(--sand);
+  background: var(--ocean-weak);
+  color: var(--ocean);
 }
 .log-type-warn {
-  background: #f97316;
-  color: var(--ink);
+  background: var(--warning-weak);
+  color: var(--warning);
 }
 .log-type-agent {
-  background: #a78bfa;
-  color: var(--ink);
+  background: var(--violet-weak);
+  color: var(--violet);
 }
 .log-type-idle {
-  background: var(--dusk-soft);
-  color: var(--sand-dark);
+  background: rgba(245, 225, 255, 0.08);
+  color: var(--text-3);
 }
 .log-type-error {
-  background: var(--red);
-  color: var(--sand);
+  background: var(--danger-weak);
+  color: var(--danger);
 }
 .log-type-task {
-  background: var(--lime);
-  color: var(--ink);
+  background: var(--success-weak);
+  color: var(--success);
 }
 .log-type-default {
-  background: var(--dusk-soft);
-  color: var(--sand);
+  background: rgba(245, 225, 255, 0.08);
+  color: var(--text-2);
 }
 
+/* ---------------- tabs (right panel + settings modal) ---------------- */
 .side-panel-tabs {
   display: flex;
-  border-bottom: 4px solid var(--ink);
-  background: var(--dusk);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
 }
 .side-tab {
   flex: 1;
@@ -697,39 +855,41 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--dusk);
+  background: transparent;
   border: none;
-  border-right: 4px solid var(--ink);
-  color: var(--sand-dark);
-  padding: 13px 8px;
+  color: var(--text-3);
+  padding: 14px 8px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.side-tab:last-child {
-  border-right: none;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: capitalize;
+  box-shadow: inset 0 -2px 0 transparent;
+  transition: color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
 }
 .side-tab:hover {
-  color: var(--sand);
-  background: var(--dusk-soft);
+  color: var(--text-1);
+  background: var(--bg-2);
 }
+/* active tab: gradient underline via a bordered pseudo isn't available on a
+   box-shadow, so use a solid ocean underline + brighter label. */
 .side-tab-active {
-  background: var(--dusk-panel);
-  color: var(--ocean);
-  box-shadow: inset 0 -4px 0 var(--ocean);
+  color: var(--text-1);
+  box-shadow: inset 0 -2px 0 var(--ocean);
 }
 .side-tab-badge {
-  background: var(--sunset-deep);
-  color: var(--ink);
-  border: 2px solid var(--ink);
-  font-size: 8px;
-  padding: 2px 6px;
-  line-height: 1;
+  background: var(--sunset-weak);
+  color: var(--sunset);
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
 }
 
-/* --- team tab --- */
+/* ------------------------------ team tab ---------------------------- */
 .team-tab {
   flex: 1;
   display: flex;
@@ -739,67 +899,78 @@ body {
 .team-list {
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 .agent-card {
-  background: var(--dusk);
-  border: 3px solid var(--ink);
-  padding: 10px;
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 13px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  transition: border-color 0.15s ease, transform 0.1s ease;
+  gap: 11px;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
 }
 .agent-card-clickable {
   cursor: pointer;
 }
 .agent-card-clickable:hover {
-  border-color: var(--ocean);
-  transform: translate(-1px, -1px);
+  border-color: var(--border-strong);
+  background: var(--bg-3);
 }
 .agent-card-selected {
-  border-color: var(--sunset);
-  box-shadow: 4px 4px 0 rgba(251, 113, 133, 0.25);
+  border-color: var(--sunset-ring);
+  box-shadow: 0 0 0 1px var(--sunset-ring), var(--glow-sunset);
 }
 
 .agent-card-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   min-width: 0;
 }
 .agent-card-name {
-  font-size: 10px;
-  color: var(--sand);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .agent-card-role {
   margin-left: auto;
-  font-size: 7px;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--ocean);
+  background: var(--ocean-weak);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
   white-space: nowrap;
 }
 .agent-card-meta {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 8px;
-  color: var(--sand-dark);
+  font-size: 11px;
+  color: var(--text-3);
 }
 .agent-card-session {
-  opacity: 0.75;
+  font-family: var(--font-mono);
+  opacity: 0.9;
 }
 .agent-card-error {
-  font-size: 8px;
-  color: var(--red);
+  font-size: 11px;
+  color: var(--danger);
+  background: var(--danger-weak);
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
   line-height: 1.5;
   word-break: break-word;
 }
@@ -809,33 +980,38 @@ body {
 }
 .agent-card-actions button {
   flex: 1;
-  background: var(--ocean-deep);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 7px 6px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 8px 6px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 8px;
-  transition: background 0.15s ease;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--r-md);
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
 }
 .agent-card-actions button:hover:not(:disabled) {
-  background: var(--ocean);
-  color: var(--ink);
+  background: var(--bg-4);
+  border-color: var(--border-strong);
 }
 .agent-card-actions button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }
 .agent-card-actions .agent-card-stop {
   flex: 0 0 auto;
-  background: #7f1d1d;
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--border);
 }
 .agent-card-actions .agent-card-stop:hover:not(:disabled) {
-  background: var(--red);
-  color: var(--sand);
+  background: var(--danger-weak);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
-/* --- tasks tab --- */
+/* ------------------------------ tasks tab --------------------------- */
 .tasks-tab {
   flex: 1;
   display: flex;
@@ -846,150 +1022,147 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding: 9px 12px;
-  font-size: 8px;
-  color: var(--sand-dark);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
-  background: rgba(45, 212, 191, 0.06);
+  padding: 11px 14px;
+  font-size: 11px;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
 }
 
 .task-board-list {
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
 .task-item {
-  background: var(--dusk);
-  border: 3px solid var(--ink);
-  border-left: 6px solid var(--sunset-deep);
-  padding: 9px;
-  font-size: 9px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--sunset);
+  border-radius: var(--r-md);
+  padding: 11px 12px;
+  font-size: 13px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 9px;
+  transition: border-color var(--t-fast);
+}
+.task-item:hover {
+  border-color: var(--border-strong);
+  border-left-color: var(--sunset);
 }
 .task-item-in_progress {
-  border-left-color: var(--amber);
+  border-left-color: var(--warning);
+}
+.task-item-in_progress:hover {
+  border-left-color: var(--warning);
 }
 .task-item-done {
   border-left-color: var(--ocean);
-  opacity: 0.55;
+  opacity: 0.6;
+}
+.task-item-done:hover {
+  border-left-color: var(--ocean);
 }
 .task-item-subject {
   line-height: 1.5;
+  color: var(--text-1);
   word-break: break-word;
 }
 .task-item-done .task-item-subject {
   text-decoration: line-through;
+  color: var(--text-3);
 }
 .task-item-meta {
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 7px;
-  color: var(--sand-dark);
+  font-size: 11px;
+  color: var(--text-3);
 }
 .task-status {
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 6px;
-  border: 2px solid var(--ink);
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
 }
 .task-status-open {
-  background: var(--sunset-deep);
-  color: var(--ink);
+  background: var(--sunset-weak);
+  color: var(--sunset);
 }
 .task-status-in_progress {
-  background: var(--amber);
-  color: var(--ink);
+  background: var(--warning-weak);
+  color: var(--warning);
 }
 .task-status-done {
-  background: var(--ocean-deep);
-  color: var(--sand);
+  background: var(--ocean-weak);
+  color: var(--ocean);
 }
 .task-assignee {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-mono);
 }
 .task-item-actions {
   display: flex;
   gap: 6px;
 }
 .task-item-actions button {
-  background: var(--dusk-soft);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 5px 8px;
-  font-size: 8px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.15s ease;
+  border-radius: var(--r-sm);
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
 }
 .task-item-actions button:hover {
-  background: var(--ocean);
-  color: var(--ink);
+  background: var(--bg-4);
+  color: var(--text-1);
+  border-color: var(--border-strong);
 }
 
 .task-board-input {
   display: flex;
-  gap: 6px;
-  padding: 10px;
-  border-top: 3px solid var(--ocean);
-  background: var(--dusk);
-}
-.task-board-input input {
-  flex: 1;
-  min-width: 0;
-  background: var(--sand);
-  border: 2px solid var(--ink);
-  color: var(--ink);
-  padding: 9px 8px;
-  font-family: inherit;
-  font-size: 9px;
-}
-.task-board-input input::placeholder {
-  color: #8a6f42;
-}
-.task-board-input button {
-  background: var(--ocean-deep);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 8px 12px;
-  font-family: inherit;
-  font-size: 9px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.task-board-input button:hover {
-  background: var(--ocean);
-  color: var(--ink);
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
 }
 
-/* ================= add-agent modal ================= */
-.add-agent-fab {
+/* ========================= add-agent (FAB + modal) ================== */
+/* Primary action — sunset gradient. Scoped under .toolbar so it outranks
+   the generic `.toolbar button` secondary style. */
+.toolbar .add-agent-fab {
   position: relative;
-  background: var(--sunset-deep);
-  border: 3px solid var(--ink);
-  color: var(--ink);
-  padding: 9px 14px;
+  background: var(--grad-sunset);
+  border: 1px solid transparent;
+  color: var(--text-inv);
+  padding: 8px 16px;
   font-family: inherit;
-  font-size: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--r-md);
   cursor: pointer;
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+  text-transform: capitalize;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: box-shadow var(--t-fast), filter var(--t-fast);
 }
-.add-agent-fab:hover {
-  background: var(--sunset);
+.toolbar .add-agent-fab:hover {
+  color: var(--text-inv);
+  filter: brightness(1.08);
+  box-shadow: var(--glow-sunset);
 }
 
-/* Emoji burst — see useEmojiBurst.tsx. Layer sits centered on whichever
-   element renders it, particles fly outward and fade via precomputed
-   per-particle --dx/--dy offsets (CSS has no sin/cos to compute these
-   itself). pointer-events: none so the burst never blocks the button. */
 .emoji-burst-layer {
   position: absolute;
   left: 50%;
@@ -1021,7 +1194,6 @@ body {
     opacity: 0;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .emoji-burst-particle {
     display: none;
@@ -1031,256 +1203,327 @@ body {
 .add-agent-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 5, 20, 0.65);
+  background: rgba(8, 4, 16, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
+  padding: 24px;
 }
 
 .add-agent-modal {
-  width: 340px;
-  background: var(--dusk-panel);
-  border: 4px solid var(--sunset-deep);
-  padding: 16px;
+  width: 380px;
+  max-width: 100%;
+  background: var(--bg-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+  gap: 14px;
+  box-shadow: var(--shadow-pop);
 }
 .add-agent-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
-  color: var(--sunset);
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--text-1);
+  text-transform: capitalize;
 }
 .add-agent-header button {
-  background: var(--dusk);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 3px 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-3);
   cursor: pointer;
   font-family: inherit;
+  border-radius: var(--r-sm);
+  transition: background var(--t-fast), color var(--t-fast);
 }
 .add-agent-header button:hover {
-  background: var(--sunset-deep);
-  color: var(--ink);
+  background: var(--sunset-weak);
+  color: var(--sunset);
 }
 .add-agent-modal label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 9px;
-  color: var(--sand-dark);
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  text-transform: capitalize;
 }
 .add-agent-modal select,
 .add-agent-modal input,
 .add-agent-modal textarea {
-  background: var(--sand);
-  border: 2px solid var(--ink);
-  color: var(--ink);
-  padding: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 10px 11px;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 13px;
+  border-radius: var(--r-md);
   resize: vertical;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.add-agent-modal select {
+  cursor: pointer;
+}
+.add-agent-modal select:focus,
+.add-agent-modal input:focus,
+.add-agent-modal textarea:focus {
+  outline: none;
+  border-color: var(--ocean);
+  box-shadow: 0 0 0 3px var(--ocean-weak);
+}
+.add-agent-modal input::placeholder,
+.add-agent-modal textarea::placeholder {
+  color: var(--text-3);
 }
 .add-agent-hint {
-  font-size: 8px;
-  color: var(--ocean);
-  opacity: 0.85;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+  text-transform: none;
 }
 .add-agent-error {
-  color: var(--red);
-  font-size: 8px;
+  color: var(--danger);
+  background: var(--danger-weak);
+  font-size: 12px;
   line-height: 1.5;
-  padding: 0 2px;
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
+  margin: 4px 0;
 }
 .add-agent-submit {
-  background: var(--ocean-deep);
-  border: 2px solid var(--ink);
-  color: var(--sand);
+  background: var(--grad-sunset);
+  border: 1px solid transparent;
+  color: var(--text-inv);
   padding: 12px;
   font-family: inherit;
-  font-size: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--r-md);
   cursor: pointer;
-  transition: background 0.15s ease;
+  text-transform: capitalize;
+  transition: box-shadow var(--t-fast), filter var(--t-fast), opacity var(--t-fast);
 }
 .add-agent-submit:hover:not(:disabled) {
-  background: var(--ocean);
-  color: var(--ink);
+  filter: brightness(1.08);
+  box-shadow: var(--glow-sunset);
 }
 .add-agent-submit:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: wait;
 }
 
-/* ================= settings modal ================= */
+/* ============================ settings modal ======================== */
 .settings-modal {
-  width: 420px;
-  max-height: 80vh;
-  background: var(--dusk-panel);
-  border: 4px solid var(--ocean-deep);
-  padding: 16px;
+  width: 460px;
+  max-width: 100%;
+  max-height: 82vh;
+  background: var(--bg-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+  gap: 14px;
+  box-shadow: var(--shadow-pop);
 }
 .settings-body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  padding-right: 2px;
 }
 .settings-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .settings-group-title {
-  font-size: 10px;
-  color: var(--ocean);
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
 }
 .settings-field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 .settings-field-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 9px;
-  color: var(--sand-dark);
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
 }
 .settings-field input {
-  background: var(--sand);
-  border: 2px solid var(--ink);
-  color: var(--ink);
-  padding: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 10px 11px;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 13px;
+  border-radius: var(--r-md);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.settings-field input:focus {
+  outline: none;
+  border-color: var(--ocean);
+  box-shadow: 0 0 0 3px var(--ocean-weak);
 }
 .settings-source {
-  font-size: 7px;
+  font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 6px;
-  border: 2px solid var(--ink);
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
 }
 .settings-source-override {
-  background: var(--lime);
-  color: var(--ink);
+  background: var(--success-weak);
+  color: var(--success);
 }
 .settings-source-env {
-  background: var(--amber);
-  color: var(--ink);
+  background: var(--warning-weak);
+  color: var(--warning);
 }
 .settings-source-unset {
-  background: var(--dusk-soft);
-  color: var(--sand-dark);
+  background: rgba(245, 225, 255, 0.08);
+  color: var(--text-3);
 }
 .settings-hint {
-  font-size: 8px;
-  color: var(--sand-dark);
+  font-size: 11px;
+  color: var(--text-3);
   line-height: 1.6;
-  border-top: 2px solid rgba(255, 255, 255, 0.1);
-  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
 }
 .settings-saved {
-  color: var(--lime);
-  font-size: 9px;
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 500;
   text-align: center;
 }
 
-/* Tabs inside the settings modal reuse .side-panel-tabs/.side-tab (the
-   right-panel team/tasks tabs) for visual consistency, but that component
-   assumes it's flush against a fixed sidebar's edges — flatten the corners
-   and border here since it's floating inside a modal instead. */
 .settings-tabs {
-  border: 2px solid var(--ink);
-  margin: 0 -2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.settings-tabs .side-tab {
+  padding: 11px 8px;
 }
 .settings-checkbox-field {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 9px;
-  color: var(--sand-dark);
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-2);
   cursor: pointer;
 }
 .settings-checkbox-field input {
   width: 16px;
   height: 16px;
-  accent-color: var(--ocean-deep);
+  accent-color: var(--sunset);
 }
 .settings-model-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .settings-model-field select {
-  background: var(--sand);
-  border: 2px solid var(--ink);
-  color: var(--ink);
-  padding: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 10px 11px;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 13px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color var(--t-fast);
+}
+.settings-model-field select:hover {
+  border-color: var(--border-strong);
 }
 .settings-model-custom {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 .settings-model-custom input {
   flex: 1;
-  background: var(--sand);
-  border: 2px solid var(--ink);
-  color: var(--ink);
-  padding: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 10px 11px;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 13px;
+  border-radius: var(--r-md);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.settings-model-custom input:focus {
+  outline: none;
+  border-color: var(--ocean);
+  box-shadow: 0 0 0 3px var(--ocean-weak);
 }
 .settings-model-custom button {
-  background: var(--dusk-soft);
-  border: 2px solid var(--ink);
-  color: var(--sand);
-  padding: 0 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 0 14px;
   font-family: inherit;
-  font-size: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--r-md);
   cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
 }
 .settings-model-custom button:hover {
-  background: var(--ocean-deep);
+  background: var(--bg-4);
+  color: var(--text-1);
 }
 .settings-model-source {
-  font-size: 7px;
-  color: var(--sand-dark);
-  opacity: 0.85;
-  line-height: 1.4;
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.5;
 }
 
-/* ================= responsive & motion ================= */
+/* ========================= responsive & motion ===================== */
 @media (max-width: 1400px) {
   :root {
-    --panel-w: 260px;
-    --panel-w-left: 240px;
+    --panel-w: 280px;
+    --panel-w-left: 264px;
   }
 }
 
 @media (max-width: 1000px) {
-  /* Small screens: both side panels overlay the office's edges instead of
-     squeezing the canvas into a sliver. */
   .game-stage-wrapper {
     left: 0;
     right: 0;
   }
   .side-panel,
   .side-panel-left {
-    opacity: 0.96;
+    box-shadow: var(--shadow-lg);
+    background: color-mix(in srgb, var(--bg-1) 95%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 }
 
@@ -1294,9 +1537,6 @@ body {
   }
 }
 
-/* Manual override (General settings → "reduce motion"), same effect as the
-   OS-level media query above but independent of it — page.tsx stamps
-   data-reduce-motion="true" on <html> from uiSettingsStore. */
 :root[data-reduce-motion="true"] *,
 :root[data-reduce-motion="true"] *::before,
 :root[data-reduce-motion="true"] *::after {

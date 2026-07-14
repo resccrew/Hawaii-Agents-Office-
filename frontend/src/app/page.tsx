@@ -80,7 +80,10 @@ export default function Home() {
   return (
     <main>
       <div className="toolbar">
-        <span className="toolbar-title">🌴 Hawaii Agents Office</span>
+        <span className="toolbar-title">
+          <span className="toolbar-logo" aria-hidden="true">🌴</span>
+          <span className="toolbar-wordmark">Hawaii Agents Office</span>
+        </span>
         <AddAgentButton onSpawned={handleAgentSpawned} />
         <button className="pixel-frame" onClick={() => setSettingsOpen(true)}>
           settings
