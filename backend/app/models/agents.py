@@ -99,6 +99,10 @@ class Lead(BaseModel):
     # default "Producer" capsule. None for real hook-observed sessions.
     role: DevRole | None = None
     name: str | None = None
+    # Optional sprite/skin override: a DevRole key that picks which character
+    # sprite is rendered, independently of the functional role above. None
+    # means "derive sprite from role as usual".
+    sprite: str | None = None
 
 
 class StandupState(StrEnum):

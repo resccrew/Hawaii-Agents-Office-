@@ -21,6 +21,10 @@ interface Props {
   name: string | null;
   chatAvailable: boolean;
   onClick?: () => void;
+  /** Optional sprite/skin override — a DevRole key that picks the character
+   *  sprite independently of the functional role. Falls back to role → sprite
+   *  mapping when null/undefined. */
+  sprite?: string | null;
 }
 
 // The office character for one spawned agent. Walks along plan.path — busy:
@@ -28,8 +32,12 @@ interface Props {
 // ("working"); idle: wherever they are → a lounge seat. Makes who's-busy
 // obvious at a glance: seated at a desk = working, hanging out by the bar/
 // hammock = free.
-export function LeadCapsule({ plan, role, name, chatAvailable, onClick }: Props) {
-  const spritePath = (role && SPRITE_PATH_BY_ROLE[role]) || DEFAULT_SPRITE_PATH;
+export function LeadCapsule({ plan, role, name, chatAvailable, onClick, sprite }: Props) {
+  // Sprite resolution order: explicit skin override → role default → producer fallback
+  const spritePath =
+    (sprite && SPRITE_PATH_BY_ROLE[sprite]) ||
+    (role && SPRITE_PATH_BY_ROLE[role]) ||
+    DEFAULT_SPRITE_PATH;
   const texture = useSpriteTexture(spritePath);
   const reduceMotion = useUiSettingsStore((s) => s.reduceMotion);
 

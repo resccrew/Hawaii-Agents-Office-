@@ -112,6 +112,10 @@ class StateMachine:
                 self.lead.name = event.data.agent_name
             if event.data.summary:
                 self.lead.current_task = event.data.summary
+            # Sprite/skin override — stored as-is (a DevRole key string);
+            # the frontend resolves it to a path via SPRITE_PATH_BY_ROLE.
+            if event.data.agent_sprite:
+                self.lead.sprite = event.data.agent_sprite
         elif event.event_type == EventType.SESSION_END:
             self.lead.state = LeadState.IDLE
             self.interactive_turn_active = False

@@ -13,6 +13,15 @@ const ROLES = [
   { value: "producer", label: "Producer" },
 ];
 
+// All available character skins — sprite path must match what's in public/sprites/
+const SKINS = [
+  { key: "programmer", label: "Coder", path: "/sprites/programmer_front_idle.png" },
+  { key: "game_designer", label: "Designer", path: "/sprites/game_designer_front_idle.png" },
+  { key: "artist", label: "Artist", path: "/sprites/artist_front_idle.png" },
+  { key: "qa_tester", label: "Tester", path: "/sprites/qa_tester_front_idle.png" },
+  { key: "producer", label: "Producer", path: "/sprites/producer_front_idle.png" },
+];
+
 // Which "brain" powers this agent — matches the backend's provider
 // registry (app/services/providers/__init__.py). Claude agents get the
 // full studio-ops MCP toolset (spawn/message/task tools); the others chat
@@ -48,9 +57,27 @@ export function AddAgentButton({ onSpawned, apiBase = getHttpBase() }: Props) {
   );
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
+  // Skin/sprite selection — defaults to matching the chosen role; user can
+  // override to give any agent any character appearance (purely cosmetic).
+  const [sprite, setSprite] = useState<string>(ROLES[0].value);
+  const [skinLocked, setSkinLocked] = useState(false);
   const [status, setStatus] = useState<"idle" | "spawning" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const { burst, layer } = useEmojiBurst();
+
+  // When role changes, auto-sync the skin UNLESS the user has manually
+  // picked a different skin ("locked").
+  const handleRoleChange = (newRole: string) => {
+    setRole(newRole);
+    if (!skinLocked) setSprite(newRole);
+  };
+
+  const handleSpriteSelect = (key: string) => {
+    setSprite(key);
+    // If the user picked the same skin as the current role, reset the lock
+    // so future role changes auto-sync again.
+    setSkinLocked(key !== role);
+  };
 
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
@@ -66,6 +93,9 @@ export function AddAgentButton({ onSpawned, apiBase = getHttpBase() }: Props) {
           role,
           name: name.trim() || role,
           initial_prompt: prompt,
+          // Only send sprite when it differs from the role — backend treats
+          // null as "use role's sprite", keeping backward compat.
+          sprite: sprite !== role ? sprite : null,
         }),
       });
       if (!resp.ok) {
@@ -77,6 +107,7 @@ export function AddAgentButton({ onSpawned, apiBase = getHttpBase() }: Props) {
       setOpen(false);
       setPrompt("");
       setName("");
+      setSkinLocked(false);
       onSpawned(data.session_id);
     } catch (err) {
       setStatus("error");
@@ -126,7 +157,7 @@ export function AddAgentButton({ onSpawned, apiBase = getHttpBase() }: Props) {
       </label>
       <label>
         role
-        <select value={role} onChange={(e) => setRole(e.target.value)}>
+        <select value={role} onChange={(e) => handleRoleChange(e.target.value)}>
           {ROLES.map((r) => (
             <option key={r.value} value={r.value}>
               {r.label}
@@ -134,6 +165,34 @@ export function AddAgentButton({ onSpawned, apiBase = getHttpBase() }: Props) {
           ))}
         </select>
       </label>
+      <div className="skin-picker-label">
+        skin
+        {skinLocked && (
+          <button
+            className="skin-picker-reset"
+            type="button"
+            onClick={() => { setSprite(role); setSkinLocked(false); }}
+            title="Reset to match role"
+          >
+            reset
+          </button>
+        )}
+      </div>
+      <div className="skin-picker">
+        {SKINS.map((skin) => (
+          <button
+            key={skin.key}
+            type="button"
+            className={`skin-option${sprite === skin.key ? " skin-option-selected" : ""}`}
+            onClick={() => handleSpriteSelect(skin.key)}
+            title={skin.label}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={skin.path} alt={skin.label} draggable={false} />
+            <span>{skin.label}</span>
+          </button>
+        ))}
+      </div>
       <label>
         department
         <select value={department} onChange={(e) => setDepartment(e.target.value)}>

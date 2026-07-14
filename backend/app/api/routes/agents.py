@@ -34,6 +34,10 @@ class CreateAgentRequest(BaseModel):
     role: str  # matches a DevRole value: programmer|game_designer|artist|qa_tester|producer
     name: str
     initial_prompt: str
+    # Optional sprite/skin override — a DevRole key (e.g. "artist") that sets
+    # which character sprite the agent renders with, independently of `role`.
+    # None means "derive sprite from role as usual".
+    sprite: str | None = None
 
 
 class CreateAgentResponse(BaseModel):
@@ -52,6 +56,7 @@ async def create_agent(payload: CreateAgentRequest) -> CreateAgentResponse:
             role=payload.role,
             name=payload.name,
             initial_prompt=payload.initial_prompt,
+            sprite=payload.sprite,
         )
     except SpawnError as exc:
         status_code = 400 if exc.stage == "provider" else 502

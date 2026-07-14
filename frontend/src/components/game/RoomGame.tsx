@@ -104,6 +104,7 @@ export function RoomGame({ onAgentClick }: { onAgentClick?: (sessionId: string) 
                 name={lead.name ?? null}
                 chatAvailable={lead.chatAvailable}
                 onClick={() => onAgentClick?.(session.sessionId)}
+                sprite={lead.sprite ?? null}
               />
               {session.devs.map((dev) => (
                 <CatCapsule

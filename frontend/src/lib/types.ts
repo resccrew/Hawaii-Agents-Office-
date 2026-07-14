@@ -71,6 +71,7 @@ export interface Lead {
   chatAvailable: boolean;
   role?: DevRole | null;
   name?: string | null;
+  sprite?: string | null;
 }
 
 export interface StudioState {

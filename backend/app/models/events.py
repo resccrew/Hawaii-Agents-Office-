@@ -114,6 +114,10 @@ class SessionEventData(EventDataBase):
     # session_id" hack (which produced a redundant idle Lead + real Dev).
     agent_role: str | None = None
     agent_name: str | None = None
+    # Optional sprite/skin key (a DevRole value) — overrides the role-derived
+    # sprite so an agent can have any character appearance regardless of its
+    # functional role. None means "use role's default sprite".
+    agent_sprite: str | None = None
 
 
 class ToolEventData(EventDataBase):

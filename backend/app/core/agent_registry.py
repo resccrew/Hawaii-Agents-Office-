@@ -50,6 +50,10 @@ class AgentSession:
     mcp_config_path: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     last_error: str | None = None
+    # Optional sprite/skin override — a DevRole key (e.g. "artist") that
+    # determines which character sprite this agent renders with, independent
+    # of its functional role. None means "use the role's default sprite".
+    sprite: str | None = None
 
 
 def _write_mcp_config(workspace: Path, agent_id: str) -> str:
@@ -82,7 +86,15 @@ class AgentRegistry:
         self._agents: dict[str, AgentSession] = {}
         self._load()
 
-    def create(self, *, provider: str, department_id: str, role: str, name: str) -> AgentSession:
+    def create(
+        self,
+        *,
+        provider: str,
+        department_id: str,
+        role: str,
+        name: str,
+        sprite: str | None = None,
+    ) -> AgentSession:
         agent_id = f"agent-{uuid.uuid4().hex[:12]}"
         workspace = AGENT_WORKSPACES_ROOT / agent_id
         workspace.mkdir(parents=True, exist_ok=True)
@@ -92,6 +104,7 @@ class AgentRegistry:
             department_id=department_id,
             role=role,
             name=name,
+            sprite=sprite,
             workspace_dir=str(workspace),
         )
         if provider == "claude":

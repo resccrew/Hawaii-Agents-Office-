@@ -36,6 +36,7 @@ async def _emit_session_start(agent: AgentSession) -> None:
                 reason="spawned",
                 agent_role=agent.role,
                 agent_name=agent.name,
+                agent_sprite=agent.sprite,
             ),
         )
     )
@@ -70,6 +71,7 @@ async def spawn_agent(
     role: str,
     name: str,
     initial_prompt: str,
+    sprite: str | None = None,
 ) -> tuple[AgentSession, str]:
     """Register + spawn a conversational agent and emit its SESSION_START so
     it renders in the office. Returns (AgentSession, first_response) — the
@@ -86,6 +88,7 @@ async def spawn_agent(
         department_id=department_id,
         role=role,
         name=name,
+        sprite=sprite,
     )
 
     try:
