@@ -144,14 +144,28 @@ async def studio_create_task(department_id: str, subject: str, description: str 
 
 
 @mcp.tool()
-async def studio_update_task(task_id: str, status: str | None = None, assignee_agent_id: str | None = None) -> dict:
+async def studio_update_task(
+    task_id: str,
+    status: str | None = None,
+    assignee_agent_id: str | None = None,
+    result: str | None = None,
+) -> dict:
     """Update a shared task's status ("open"|"in_progress"|"done") and/or
-    claim it by setting assignee_agent_id to your own agent id."""
+    claim it by setting assignee_agent_id to your own agent id.
+
+    When you set status="done", ALSO pass `result`: a short report of the
+    outcome for the human to read — what you did, and a link or file path to
+    the deliverable (e.g. "Built a playable snake game. File: /Users/.../
+    index.html" or "Deployed at https://...". Include any caveats or test
+    results). This is what shows up when the human clicks the completed task,
+    so make it self-contained and specific."""
     payload: dict[str, str] = {}
     if status:
         payload["status"] = status
     if assignee_agent_id:
         payload["assignee_agent_id"] = assignee_agent_id
+    if result:
+        payload["result"] = result
     async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
         resp = await client.patch(f"/api/v1/tasks/{task_id}", json=payload)
         resp.raise_for_status()

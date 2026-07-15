@@ -86,6 +86,7 @@
 
   /* ---- layout ---- */
   --toolbar-h: 58px;
+  --gitbar-h: 46px;
   --panel-w: 320px;
   --panel-w-left: 300px;
 }
@@ -316,7 +317,7 @@ body {
 .game-stage-wrapper {
   position: fixed;
   top: var(--toolbar-h);
-  bottom: 0;
+  bottom: var(--gitbar-h);
   left: var(--panel-w-left);
   right: var(--panel-w);
   display: flex;
@@ -331,6 +332,183 @@ body {
   position: relative;
   flex: 0 0 auto;
   display: block;
+}
+
+/* ============================ git bar =============================== */
+/* Docked under the office, between the two side panels: pick the working
+   repository and push it to GitHub in one click. */
+.git-bar {
+  position: fixed;
+  bottom: 0;
+  left: var(--panel-w-left);
+  right: var(--panel-w);
+  height: var(--gitbar-h);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -6px 20px -12px rgba(0, 0, 0, 0.7);
+}
+.git-bar-glyph {
+  color: var(--ocean);
+  font-size: 15px;
+  flex: 0 0 auto;
+}
+.git-bar-select {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  max-width: 220px;
+  transition: border-color var(--t-fast);
+}
+.git-bar-select:hover {
+  border-color: var(--border-strong);
+}
+.git-bar-btn {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.git-bar-btn:hover {
+  background: var(--bg-4);
+  border-color: var(--border-strong);
+}
+.git-bar-btn-ghost {
+  background: transparent;
+  color: var(--text-2);
+}
+.git-bar-btn-ghost:hover {
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+.git-bar-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.git-bar-add-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 7px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-radius: var(--r-md);
+}
+.git-bar-add-input:focus {
+  outline: none;
+  border-color: var(--ocean);
+  box-shadow: 0 0 0 3px var(--ocean-weak);
+}
+.git-bar-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.git-bar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.git-bar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-full);
+  flex: 0 0 auto;
+}
+.git-bar-dot-clean {
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-weak);
+}
+.git-bar-dot-dirty {
+  background: var(--warning);
+  box-shadow: 0 0 0 3px var(--warning-weak);
+}
+.git-bar-spacer {
+  flex: 1;
+}
+.git-bar-result {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+.git-bar-result-ok {
+  color: var(--success);
+}
+.git-bar-result-err {
+  color: var(--danger);
+}
+.git-bar-msg {
+  width: 200px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: var(--r-md);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.git-bar-msg::placeholder {
+  color: var(--text-3);
+}
+.git-bar-msg:focus {
+  outline: none;
+  border-color: var(--ocean);
+  box-shadow: 0 0 0 3px var(--ocean-weak);
+}
+.git-bar-push {
+  background: var(--grad-sunset);
+  border: 1px solid transparent;
+  color: var(--text-inv);
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: box-shadow var(--t-fast), filter var(--t-fast), opacity var(--t-fast);
+}
+.git-bar-push:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--glow-sunset);
+}
+.git-bar-push:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .game-stage-wrapper canvas {
@@ -1076,6 +1254,57 @@ body {
   text-decoration: line-through;
   color: var(--text-3);
 }
+/* Done tasks reveal their result report on click. */
+.task-item-subject-clickable {
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  text-decoration: none;
+  transition: color var(--t-fast);
+}
+.task-item-done .task-item-subject-clickable {
+  text-decoration: none;
+}
+.task-item-subject-clickable:hover {
+  color: var(--text-2);
+}
+.task-item-caret {
+  flex: 0 0 auto;
+  font-size: 9px;
+  color: var(--ocean);
+  transition: transform var(--t-fast);
+  transform: translateY(-1px);
+}
+.task-item-caret-open {
+  transform: translateY(-1px) rotate(90deg);
+}
+.task-item-result {
+  border-top: 1px dashed var(--border-strong);
+  padding-top: 9px;
+  margin-top: 1px;
+}
+.task-item-result-body {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-1);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.task-item-result-body a {
+  color: var(--ocean);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+.task-item-result-body a:hover {
+  color: var(--ocean-strong);
+}
+.task-item-result-empty {
+  font-size: 11px;
+  color: var(--text-3);
+  font-style: italic;
+}
 .task-item-meta {
   display: flex;
   gap: 8px;
@@ -1602,7 +1831,8 @@ body {
 }
 
 @media (max-width: 1000px) {
-  .game-stage-wrapper {
+  .game-stage-wrapper,
+  .git-bar {
     left: 0;
     right: 0;
   }

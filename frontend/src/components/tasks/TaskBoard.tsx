@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useTaskStore, selectTasksFor, connectTaskBoard, createTask, updateTaskStatus } from "@/stores/taskStore";
 import type { TaskStatus } from "@/stores/taskStore";
 
@@ -10,6 +11,30 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   done: "done",
 };
 
+// Turn http(s)/file links inside an agent's result report into clickable
+// anchors; everything else (including bare file paths, which browsers block
+// from navigating anyway) stays as selectable text.
+const LINK_RE = /(https?:\/\/[^\s]+|file:\/\/[^\s]+)/g;
+function renderResult(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const re = new RegExp(LINK_RE);
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) nodes.push(<span key={key++}>{text.slice(last, m.index)}</span>);
+    const url = m[0];
+    nodes.push(
+      <a key={key++} href={url} target="_blank" rel="noreferrer">
+        {url}
+      </a>,
+    );
+    last = m.index + url.length;
+  }
+  if (last < text.length) nodes.push(<span key={key++}>{text.slice(last)}</span>);
+  return nodes;
+}
+
 // Structured half of Phase 6 coordination — the shared task board every
 // agent in a department (and the human) reads/writes to. No longer a
 // stand-alone fixed panel: it renders as the "tasks" tab body inside
@@ -17,6 +42,8 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 export function TaskBoard({ departmentId }: { departmentId: string | null }) {
   const tasks = useTaskStore(selectTasksFor(departmentId ?? ""));
   const [draft, setDraft] = useState("");
+  // Which done task is expanded to show its result report. Only one at a time.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const disconnectRef = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -50,26 +77,49 @@ export function TaskBoard({ departmentId }: { departmentId: string | null }) {
             <span className="panel-empty-hint">add one below — agents see it live</span>
           </div>
         )}
-        {tasks.map((t) => (
-          <div key={t.id} className={`task-item task-item-${t.status}`}>
-            <div className="task-item-subject">{t.subject}</div>
-            <div className="task-item-meta">
-              <span className={`task-status task-status-${t.status}`}>{STATUS_LABEL[t.status]}</span>
-              {t.assigneeAgentId && <span className="task-assignee">@{t.assigneeAgentId}</span>}
+        {tasks.map((t) => {
+          const isDone = t.status === "done";
+          const isExpanded = expandedId === t.id;
+          return (
+            <div key={t.id} className={`task-item task-item-${t.status}`}>
+              <div
+                className={`task-item-subject${isDone ? " task-item-subject-clickable" : ""}`}
+                onClick={isDone ? () => setExpandedId(isExpanded ? null : t.id) : undefined}
+                role={isDone ? "button" : undefined}
+                title={isDone ? "show result" : undefined}
+              >
+                {isDone && <span className={`task-item-caret${isExpanded ? " task-item-caret-open" : ""}`}>▸</span>}
+                {t.subject}
+              </div>
+              <div className="task-item-meta">
+                <span className={`task-status task-status-${t.status}`}>{STATUS_LABEL[t.status]}</span>
+                {t.assigneeAgentId && <span className="task-assignee">@{t.assigneeAgentId}</span>}
+              </div>
+              {isDone && isExpanded && (
+                <div className="task-item-result">
+                  {t.result ? (
+                    <div className="task-item-result-body">{renderResult(t.result)}</div>
+                  ) : (
+                    <div className="task-item-result-empty">
+                      no result was recorded for this task
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="task-item-actions">
+                {t.status !== "in_progress" && t.status !== "done" && (
+                  <button onClick={() => void updateTaskStatus(t.id, "in_progress")}>▶ start</button>
+                )}
+                {t.status !== "done" && (
+                  <button onClick={() => void updateTaskStatus(t.id, "done")}>✓ done</button>
+                )}
+                {t.status === "done" && (
+                  <button onClick={() => void updateTaskStatus(t.id, "open")}>↩ reopen</button>
+                )}
+              </div>
             </div>
-            <div className="task-item-actions">
-              {t.status !== "in_progress" && t.status !== "done" && (
-                <button onClick={() => void updateTaskStatus(t.id, "in_progress")}>▶ start</button>
-              )}
-              {t.status !== "done" && (
-                <button onClick={() => void updateTaskStatus(t.id, "done")}>✓ done</button>
-              )}
-              {t.status === "done" && (
-                <button onClick={() => void updateTaskStatus(t.id, "open")}>↩ reopen</button>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="task-board-input">
         <input

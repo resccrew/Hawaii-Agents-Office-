@@ -5,6 +5,7 @@ import { RoomGame } from "@/components/game/RoomGame";
 import { ChatLayer } from "@/components/chat/ChatLayer";
 import { SidePanel } from "@/components/panels/SidePanel";
 import { ActivityLog } from "@/components/panels/ActivityLog";
+import { GitBar } from "@/components/panels/GitBar";
 import { SettingsModal } from "@/components/panels/SettingsModal";
 import { AddAgentButton } from "@/components/agents/AddAgentButton";
 import { selectDepartmentId, useGameStore } from "@/stores/gameStore";
@@ -108,6 +109,7 @@ export default function Home() {
           <ChatLayer anchorFor={anchorFor} frame={stageSize} />
         </div>
       </div>
+      <GitBar />
       <SidePanel departmentId={departmentId ?? "Engineering"} onSelectAgent={handleSelectAgent} />
     </main>
   );

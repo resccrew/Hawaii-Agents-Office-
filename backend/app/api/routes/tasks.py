@@ -25,6 +25,7 @@ class CreateTaskRequest(BaseModel):
 class UpdateTaskRequest(BaseModel):
     status: TaskStatus | None = None
     assignee_agent_id: str | None = None
+    result: str | None = None
 
 
 @rest_router.get("/tasks", response_model=list[SharedTask])
@@ -48,7 +49,10 @@ async def create_task(payload: CreateTaskRequest) -> SharedTask:
 async def update_task(task_id: str, payload: UpdateTaskRequest) -> SharedTask:
     board = get_task_board(get_manager())
     task = await board.update(
-        task_id, status=payload.status, assignee_agent_id=payload.assignee_agent_id
+        task_id,
+        status=payload.status,
+        assignee_agent_id=payload.assignee_agent_id,
+        result=payload.result,
     )
     if task is None:
         raise HTTPException(status_code=404, detail="task not found")

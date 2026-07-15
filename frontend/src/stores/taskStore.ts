@@ -14,6 +14,7 @@ export interface SharedTask {
   status: TaskStatus;
   assigneeAgentId: string | null;
   createdByAgentId: string | null;
+  result: string | null;
   createdAt: string;
   updatedAt: string;
 }

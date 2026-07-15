@@ -37,6 +37,7 @@ SETTING_FIELDS: list[tuple[str, str, str]] = [
     ("ollama_base_url", "Ollama base URL", "text"),
     ("ollama_model", "Ollama model", "text"),
     ("nanobanana_api_key", "Nano Banana (image gen) API key", "secret"),
+    ("github_token", "GitHub token (for the git bar)", "secret"),
 ]
 
 ENV_VAR_BY_KEY: dict[str, str] = {
@@ -47,6 +48,7 @@ ENV_VAR_BY_KEY: dict[str, str] = {
     "ollama_base_url": "STUDIO_OPS_OLLAMA_BASE_URL",
     "ollama_model": "STUDIO_OPS_OLLAMA_MODEL",
     "nanobanana_api_key": "STUDIO_OPS_NANOBANANA_API_KEY",
+    "github_token": "STUDIO_OPS_GITHUB_TOKEN",
 }
 
 _KNOWN_KEYS = {key for key, _, _ in SETTING_FIELDS}

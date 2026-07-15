@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -46,6 +47,9 @@ class _QueuedMessage:
     attachments: list[SavedAttachment] | None = None
 
 
+IdleHook = Callable[[str], Awaitable[None]]
+
+
 class ChatBridge:
     def __init__(self, manager: ConnectionManager, processor: EventProcessor) -> None:
         self.manager = manager
@@ -53,7 +57,31 @@ class ChatBridge:
         self._locks: dict[str, asyncio.Lock] = {}
         self._queues: dict[str, list[_QueuedMessage]] = {}
         self._cwds: dict[str, str | None] = {}
+        self._idle_hooks: list[IdleHook] = []
         LOCK_DIR.mkdir(parents=True, exist_ok=True)
+
+    def register_idle_hook(self, hook: IdleHook) -> None:
+        """Register a callback fired (with the session_id) whenever a
+        session's chat queue finishes draining — i.e. that agent just went
+        idle. The Autopilot uses this to notice the CEO becoming free."""
+        self._idle_hooks.append(hook)
+
+    def is_busy(self, session_id: str) -> bool:
+        """True if a drain is in flight for this session or messages are still
+        queued for it. Lets callers (Autopilot) avoid piling on nudges."""
+        lock = self._locks.get(session_id)
+        if lock is not None and lock.locked():
+            return True
+        return bool(self._queues.get(session_id))
+
+    async def _fire_idle(self, session_id: str) -> None:
+        for hook in self._idle_hooks:
+            try:
+                await hook(session_id)
+            except Exception:  # noqa: BLE001 — an idle hook must never break draining
+                import logging
+
+                logging.getLogger("studio_ops.chat_bridge").exception("idle hook failed")
 
     async def _record(
         self, session_id: str, *, prompt: str | None = None, response_text: str | None = None
@@ -145,10 +173,12 @@ class ChatBridge:
         if lock.locked():
             return  # another drain already in flight for this session
 
+        drained_any = False
         async with lock:
             queue = self._queues.setdefault(sm.session_id, [])
             while queue and not sm.interactive_turn_active:
                 queued = queue.pop(0)
+                drained_any = True
                 await self._send_one(
                     sm,
                     queued.text,
@@ -157,6 +187,12 @@ class ChatBridge:
                     effort=queued.effort,
                     attachments=queued.attachments,
                 )
+
+        # Fire idle hooks only AFTER releasing the lock, so a hook that wants
+        # to enqueue+drain a follow-up (the Autopilot's "keep going" loop) can
+        # actually acquire the lock instead of no-op'ing on a held one.
+        if drained_any and not sm.interactive_turn_active:
+            await self._fire_idle(sm.session_id)
 
     async def _send_one(
         self,

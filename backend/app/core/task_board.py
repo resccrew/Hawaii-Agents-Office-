@@ -12,21 +12,42 @@ at startup. Not a database — just enough to survive a restart.
 from __future__ import annotations
 
 import json
+import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
 from app.core.connection_manager import ConnectionManager
 from app.models.tasks import SharedTask, TaskStatus
 
+logger = logging.getLogger("studio_ops.task_board")
+
 STATE_FILE = Path.home() / "studio-ops" / "state" / "tasks.json"
+
+# ("created" | "updated", task) — fired after a mutation is persisted and
+# broadcast. Used by the Autopilot to drive the CEO off the board.
+TaskHook = Callable[[str, SharedTask], Awaitable[None]]
 
 
 class TaskBoard:
     def __init__(self, manager: ConnectionManager) -> None:
         self.manager = manager
         self._tasks: dict[str, SharedTask] = {}
+        self._hooks: list[TaskHook] = []
         self._load()
+
+    def register_hook(self, hook: TaskHook) -> None:
+        self._hooks.append(hook)
+
+    async def _fire(self, event: str, task: SharedTask) -> None:
+        """Notify hooks. Hooks are expected to return quickly (schedule any
+        long work themselves); a misbehaving hook can't break the mutation."""
+        for hook in self._hooks:
+            try:
+                await hook(event, task)
+            except Exception:  # noqa: BLE001 — a hook must never break the board
+                logger.exception("task board hook failed for %s %s", event, task.id)
 
     def list_for_department(self, department_id: str) -> list[SharedTask]:
         return sorted(
@@ -52,6 +73,7 @@ class TaskBoard:
         self._tasks[task.id] = task
         self._save()
         await self._broadcast(department_id)
+        await self._fire("created", task)
         return task
 
     async def update(
@@ -60,6 +82,7 @@ class TaskBoard:
         *,
         status: TaskStatus | None = None,
         assignee_agent_id: str | None = None,
+        result: str | None = None,
     ) -> SharedTask | None:
         task = self._tasks.get(task_id)
         if task is None:
@@ -68,9 +91,12 @@ class TaskBoard:
             task.status = status
         if assignee_agent_id is not None:
             task.assignee_agent_id = assignee_agent_id
+        if result is not None:
+            task.result = result
         task.updated_at = datetime.now(UTC)
         self._save()
         await self._broadcast(task.department_id)
+        await self._fire("updated", task)
         return task
 
     async def _broadcast(self, department_id: str) -> None:

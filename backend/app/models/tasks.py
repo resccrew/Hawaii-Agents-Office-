@@ -32,5 +32,9 @@ class SharedTask(BaseModel):
     status: TaskStatus = TaskStatus.OPEN
     assignee_agent_id: str | None = None
     created_by_agent_id: str | None = None  # None = created by the human via UI
+    # The outcome the assignee reports on completion — a short report, a
+    # summary of what was done, and/or a link/file path to the deliverable.
+    # Surfaced in the UI when the human clicks a done task. None until set.
+    result: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
