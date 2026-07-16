@@ -94,7 +94,13 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
           role: m.role === "user" || m.role === "assistant" ? m.role : "system",
           text: String(m.text ?? ""),
         }));
-        sessions.set(sessionId, { messages: [...history, ...inFlight], status: existing.status });
+        // Receiving history means the socket is connected and healthy again,
+        // so clear any stale "error" left over from the drop that triggered
+        // this reconnect (otherwise the red "connection error" banner sticks
+        // forever even though the agent is replying fine). Preserve
+        // "streaming" if a reply is still mid-flight on this connection.
+        const recoveredStatus: ChatTurnStatus = inFlight.length > 0 ? "streaming" : "idle";
+        sessions.set(sessionId, { messages: [...history, ...inFlight], status: recoveredStatus });
         set({ sessions });
         return;
       }

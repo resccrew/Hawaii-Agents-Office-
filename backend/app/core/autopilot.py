@@ -44,9 +44,10 @@ logger = logging.getLogger("studio_ops.autopilot")
 
 # How many times we'll re-nudge an idle CEO about the SAME unchanged set of
 # open tasks before giving up and waiting for the board to change (or the
-# human to step in). Prevents an infinite idle->nudge->idle loop when the CEO
-# stops making progress.
-MAX_STALL_NUDGES = 3
+# human to step in). Kept low on purpose: every nudge is a paid CEO turn, so
+# we remind once and then wait rather than burning usage re-poking a stalled
+# board.
+MAX_STALL_NUDGES = 1
 
 
 def _truncate(text: str | None, limit: int = 240) -> str:
@@ -207,9 +208,12 @@ class Autopilot:
         playbook = (
             "Run this end-to-end, autonomously, without waiting for the human:\n"
             "1. Break each task into concrete subtasks with studio_create_task.\n"
-            "2. Decide the roles you need. Reuse suitable existing teammates "
-            "(studio_list_agents) before hiring; only studio_spawn_agent when a "
-            "needed skill is missing. Give every hire a specific briefing.\n"
+            "2. Decide the roles you need, but keep the team SMALL to conserve "
+            "usage — every agent and every turn costs limits. Strongly prefer "
+            "reusing existing teammates (studio_list_agents), and hand one "
+            "capable agent several related subtasks rather than hiring a new "
+            "specialist per task. Only studio_spawn_agent when a needed skill is "
+            "genuinely missing, and give every hire a specific briefing.\n"
             "3. Assign each subtask (studio_update_task with assignee_agent_id + "
             "status in_progress) and brief its owner with studio_send_message.\n"
             "4. Keep the board honest: mark tasks in_progress when work starts and "

@@ -50,6 +50,13 @@ class AgentSession:
     mcp_config_path: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     last_error: str | None = None
+    # Cost control: every studio agent (the CEO and everyone it hires) runs
+    # on a cheaper model at moderate effort by DEFAULT, so autonomous work
+    # (spawns + every autopilot-driven turn) burns limits far slower than an
+    # ad-hoc chat would. The human can still override per-message from the
+    # chat window's model/effort selector — that override wins for that turn.
+    model: str = "sonnet"
+    effort: str = "medium"
     # Optional sprite/skin override — a DevRole key (e.g. "artist") that
     # determines which character sprite this agent renders with, independent
     # of its functional role. None means "use the role's default sprite".

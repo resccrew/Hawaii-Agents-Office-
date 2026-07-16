@@ -100,6 +100,10 @@ async def spawn_agent(
             initial_prompt=initial_prompt,
             mcp_config_path=agent.mcp_config_path,
             permission_mode="bypassPermissions",
+            # Economical defaults (see AgentSession.model/effort) — the
+            # initial spawn turn uses them too, not just later turns.
+            model=agent.model,
+            effort=agent.effort,
         )
     except ProviderError as exc:
         agent.status = "error"

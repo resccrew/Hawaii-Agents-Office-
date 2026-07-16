@@ -246,6 +246,16 @@ class ChatBridge:
         provider_name = agent.provider if agent else "claude"
         provider = get_conversational_provider(provider_name)
 
+        # Cost control: for a spawned studio agent, fall back to its cheap
+        # default model/effort (sonnet/medium) whenever the caller didn't
+        # specify one. The autopilot and every routine turn pass None here, so
+        # this is what keeps autonomous work off the expensive default model.
+        # An explicit choice (human picking a model in the chat selector) is
+        # kept as-is and wins. Hook-observed interactive sessions have no agent
+        # entry — left untouched (that's the user's own terminal).
+        resolved_model = model or (agent.model if agent else None)
+        resolved_effort = effort or (agent.effort if agent else None)
+
         response_text = ""
         try:
             if provider is None:
@@ -256,8 +266,8 @@ class ChatBridge:
                 message=text,
                 mcp_config_path=mcp_config_path,
                 permission_mode=permission_mode,
-                model=model,
-                effort=effort,
+                model=resolved_model,
+                effort=resolved_effort,
                 attachments=attachments,
             ):
                 if chunk.kind == "text_delta":
