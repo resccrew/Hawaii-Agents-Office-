@@ -40,3 +40,4 @@ chat-uploads/
 .env
 .env.local
 *.env
+*.log
