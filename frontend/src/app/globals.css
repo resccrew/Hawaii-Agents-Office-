@@ -478,11 +478,28 @@ body {
   padding: 8px;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 .terminal-pane .xterm,
 .terminal-pane .xterm-viewport {
   height: 100%;
   background-color: transparent !important;
+}
+/* xterm's IME/dictation composition overlay (used by macOS voice input) has
+   no width limit by default (white-space: nowrap, no max-width) and its own
+   hardcoded black-on-white styling — so a long dictated phrase visibly
+   spills out past the pane edge until it's committed. Clip it to the pane
+   and match the terminal theme instead of xterm's default black box. */
+.terminal-pane .composition-view {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #1a1b26 !important;
+  color: #d5d6db !important;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  padding: 1px 4px;
 }
 .terminal-pane-toolbar {
   flex: 0 0 auto;
