@@ -47,6 +47,7 @@ export default function Home() {
   const refreshAgents = useAgentsStore((s) => s.refresh);
   const roomDisconnectRef = useRef<() => void>(() => {});
   const reduceMotion = useUiSettingsStore((s) => s.reduceMotion);
+  const theme = useUiSettingsStore((s) => s.theme);
 
   useEffect(() => {
     roomDisconnectRef.current = connectOverview();
@@ -63,12 +64,13 @@ export default function Home() {
     if (activeWorkspaceId) void refreshPanes(activeWorkspaceId);
   }, [activeWorkspaceId, refreshPanes]);
 
-  // General settings → "reduce motion" — stamped on <html> so the CSS
+  // General settings → "reduce motion" and "theme" — stamped on <html> so the CSS
   // attribute-selector twin of the OS prefers-reduced-motion query (see
   // globals.css) can apply regardless of the OS-level setting.
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = String(reduceMotion);
-  }, [reduceMotion]);
+    document.documentElement.dataset.theme = theme;
+  }, [reduceMotion, theme]);
 
   const handleAgentSpawned = (newSessionId: string) => {
     // The new agent appears immediately — it's already in the shared room,

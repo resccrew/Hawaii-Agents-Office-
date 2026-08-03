@@ -91,6 +91,57 @@
   --panel-w-left: 300px;
 }
 
+[data-theme="terminal"] {
+  /* ---- terminal (tokyo night) surfaces ---- */
+  --bg-0: #16161e; /* deeper background */
+  --bg-1: #1a1b26; /* panels (matches terminal exactly) */
+  --bg-2: #1f2335; /* cards, inputs */
+  --bg-3: #24283b; /* hover / raised */
+  --bg-4: #292e42; /* active / pressed */
+
+  /* ---- borders ---- */
+  --border: rgba(169, 177, 214, 0.10);
+  --border-strong: rgba(169, 177, 214, 0.20);
+
+  /* ---- text ---- */
+  --text-1: #c0caf5;
+  --text-2: #a9b1d6;
+  --text-3: #565f89;
+  --text-inv: #16161e;
+
+  /* ---- tokyo night colors (mapping to semantic variables) ---- */
+  --sunset: #7aa2f7; /* using tokyo blue for primary action */
+  --sunset-2: #7dcfff; /* tokyo cyan */
+  --sunset-weak: rgba(122, 162, 247, 0.16);
+  --sunset-ring: rgba(122, 162, 247, 0.50);
+
+  --ocean: #9ece6a; /* tokyo green */
+  --ocean-strong: #73daca;
+  --ocean-weak: rgba(158, 206, 106, 0.13);
+  --ocean-ring: rgba(158, 206, 106, 0.42);
+
+  /* ---- brand gradients ---- */
+  --grad-brand: linear-gradient(100deg, #7aa2f7, #bb9af7 48%, #9ece6a);
+  --grad-sunset: linear-gradient(135deg, #7aa2f7, #bb9af7);
+  --grad-ocean: linear-gradient(135deg, #9ece6a, #73daca);
+
+  /* ---- semantic overrides ---- */
+  --success: #9ece6a;
+  --success-weak: rgba(158, 206, 106, 0.14);
+  --warning: #e0af68;
+  --warning-weak: rgba(224, 175, 104, 0.15);
+  --danger: #f7768e;
+  --danger-weak: rgba(247, 118, 142, 0.15);
+  --info: #7dcfff;
+  --info-weak: rgba(125, 207, 255, 0.15);
+  --violet: #bb9af7;
+  --violet-weak: rgba(187, 154, 247, 0.15);
+
+  /* ---- elevation (cooler tinted) ---- */
+  --glow-sunset: 0 6px 22px -6px rgba(122, 162, 247, 0.62);
+  --glow-ocean: 0 6px 22px -6px rgba(158, 206, 106, 0.45);
+}
+
 * {
   box-sizing: border-box;
 }

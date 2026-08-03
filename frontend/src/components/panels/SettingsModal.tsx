@@ -248,6 +248,13 @@ export function SettingsModal({ onClose }: Props) {
               />
               <span>reduce motion (agents appear instantly, no burst/UI animation)</span>
             </label>
+            <label className="settings-field">
+              <span className="settings-field-label">app theme</span>
+              <select value={useUiSettingsStore((s) => s.theme)} onChange={(e) => useUiSettingsStore.getState().setTheme(e.target.value as "hawaii" | "terminal")}>
+                <option value="hawaii">Hawaii Office (Beach/Sunset)</option>
+                <option value="terminal">Terminal (Tokyo Night)</option>
+              </select>
+            </label>
             <div className="settings-hint">
               Changing the backend URL reconnects every socket the next time a panel opens — reload
               the page if something still looks stale.
