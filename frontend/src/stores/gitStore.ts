@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { getHttpBase } from "@/systems/backendUrl";
+import { getHttpBase, fetchWithRetry } from "@/systems/backendUrl";
 
 export interface GitRepo {
   path: string;
@@ -81,7 +81,7 @@ export const useGitStore = create<GitStore>()((set, get) => ({
   refresh: async () => {
     set({ loading: true, error: null });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/git`);
+      const resp = await fetchWithRetry(`${getHttpBase()}/api/v1/git`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       applyState(set, await resp.json());
     } catch (e) {
@@ -151,7 +151,7 @@ export const useGitStore = create<GitStore>()((set, get) => ({
   fetchGithub: async () => {
     set({ githubLoading: true });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/git/github`);
+      const resp = await fetchWithRetry(`${getHttpBase()}/api/v1/git/github`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       set({ github: data.status ?? null, githubRepos: data.repos ?? [] });

@@ -86,7 +86,7 @@
 
   /* ---- layout ---- */
   --toolbar-h: 58px;
-  --gitbar-h: 46px;
+  --gitbar-h: 0px;
   --panel-w: 320px;
   --panel-w-left: 300px;
 }
@@ -320,14 +320,11 @@ body {
    small floating box instead of the full stage — useFitSize measures this
    element's actual rendered size, so shrinking it here is enough; no
    changes needed on the pixi/rendering side. */
-.game-stage-wrapper {
-  position: fixed;
-  top: auto;
-  bottom: calc(var(--gitbar-h) + 14px);
-  left: auto;
-  right: calc(var(--panel-w) + 14px);
-  width: 320px;
-  height: 200px;
+.game-stage-wrapper-inline {
+  position: relative;
+  width: calc(100% - 24px);
+  margin: 12px;
+  height: 198px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -335,8 +332,8 @@ body {
   background: var(--bg-0);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-lg), inset 0 0 60px rgba(0, 0, 0, 0.4);
-  z-index: 20;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
+  flex: 0 0 auto;
 }
 
 .game-canvas-frame {
@@ -366,13 +363,19 @@ body {
   min-height: 0;
 }
 
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+
 .main-view-tabs {
   flex: 0 0 auto;
   display: flex;
   gap: 2px;
   padding: 6px 12px 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-1);
 }
 .main-view-tab {
   background: none;
@@ -473,9 +476,13 @@ body {
   min-width: 0;
   min-height: 0;
   padding: 8px;
+  display: flex;
+  flex-direction: column;
 }
-.terminal-pane .xterm {
+.terminal-pane .xterm,
+.terminal-pane .xterm-viewport {
   height: 100%;
+  background-color: transparent !important;
 }
 .terminal-pane-toolbar {
   flex: 0 0 auto;
@@ -508,14 +515,13 @@ body {
 
 /* =========================== workspace tabs =========================== */
 .workspace-tabs {
-  flex: 0 0 auto;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 12px;
   height: 42px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-1);
 }
 .workspace-tabs-list {
   display: flex;
@@ -617,22 +623,15 @@ body {
 }
 
 /* ============================ git bar =============================== */
-/* Docked under the office, between the two side panels: pick the working
-   repository and push it to GitHub in one click. */
 .git-bar {
-  position: fixed;
-  bottom: 0;
-  left: var(--panel-w-left);
-  right: var(--panel-w);
-  height: var(--gitbar-h);
-  z-index: 35;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
-  background: var(--bg-1);
-  border-top: 1px solid var(--border);
-  box-shadow: 0 -6px 20px -12px rgba(0, 0, 0, 0.7);
+  background: transparent;
+  padding: 0 8px;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  height: 100%;
 }
 .git-bar-glyph {
   color: var(--ocean);
@@ -793,7 +792,7 @@ body {
   cursor: default;
 }
 
-.game-stage-wrapper canvas {
+.game-stage-wrapper-inline canvas {
   min-width: 0;
   min-height: 0;
   width: 100% !important;

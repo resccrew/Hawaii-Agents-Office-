@@ -15,3 +15,23 @@ export function getHttpBase(): string {
 export function getWsBase(): string {
   return getHttpBase().replace(/^http/, "ws");
 }
+
+// The packaged desktop app spawns its backend as a sidecar process that
+// takes up to ~15s to bind its port (PyInstaller onefile self-extraction
+// runs on every launch), while the frontend's mount-time fetches fire as
+// soon as the page paints — racing it and landing a permanent "Load failed"
+// since those calls only ever run once. Retry for up to ~40s before giving
+// up; use this in place of a bare fetch() for anything called once on
+// mount (not for user-triggered actions after the app is already up).
+export async function fetchWithRetry(url: string, attempts = 40, delayMs = 1000): Promise<Response> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetch(url);
+    } catch (e) {
+      lastError = e;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw lastError;
+}

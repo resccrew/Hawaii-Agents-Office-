@@ -1,23 +1,31 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ChatWindow } from "./ChatWindow";
 import { useChatStore, selectOpenSessions } from "@/stores/chatStore";
-import type { FitSize } from "@/systems/useFitSize";
-
-interface Props {
-  // Maps an agent's session_id to its on-screen pixel position inside the
-  // canvas frame (computed in page.tsx from the agent's slot), so a newly
-  // opened window can anchor above the right sprite. null = agent not
-  // on-screen (overflow) → window opens at a default spot.
-  anchorFor: (sessionId: string) => { x: number; y: number } | null;
-  frame: FitSize;
-}
 
 // Renders every open chat window. Array order in the store is the z-order,
 // so the index maps straight to zIndex — the last-focused window sits on
 // top. Base z of 20 keeps them above the canvas but below modals (z 50).
-export function ChatLayer({ anchorFor, frame }: Props) {
+export function ChatLayer() {
   const openSessions = useChatStore(selectOpenSessions);
+  const [frame, setFrame] = useState({ 
+    width: typeof window !== 'undefined' ? window.innerWidth : 1000, 
+    height: typeof window !== 'undefined' ? window.innerHeight : 800, 
+    cropX: 0, 
+    cropY: 0 
+  });
+
+  useEffect(() => {
+    const handleResize = () => setFrame({ 
+      width: window.innerWidth, 
+      height: window.innerHeight, 
+      cropX: 0, 
+      cropY: 0 
+    });
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
     <>
@@ -25,9 +33,9 @@ export function ChatLayer({ anchorFor, frame }: Props) {
         <ChatWindow
           key={sessionId}
           sessionId={sessionId}
-          anchor={anchorFor(sessionId)}
+          anchor={null}
           frame={frame}
-          zIndex={20 + i}
+          zIndex={50 + i}
         />
       ))}
     </>

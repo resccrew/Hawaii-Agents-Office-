@@ -36,8 +36,32 @@ export function TerminalPane({ paneId }: Props) {
     const term = new Terminal({
       convertEol: true,
       fontFamily: "var(--font-mono, monospace)",
-      fontSize: 13,
-      theme: { background: "#0e0819" },
+      fontSize: 14,
+      lineHeight: 1.35,
+      cursorBlink: true,
+      theme: {
+        background: "#1a1b26",
+        foreground: "#d5d6db",
+        cursor: "#c0caf5",
+        cursorAccent: "#1a1b26",
+        selectionBackground: "rgba(122, 162, 247, 0.35)",
+        black: "#1a1b26",
+        red: "#f7768e",
+        green: "#9ece6a",
+        yellow: "#e0af68",
+        blue: "#7aa2f7",
+        magenta: "#bb9af7",
+        cyan: "#7dcfff",
+        white: "#c0caf5",
+        brightBlack: "#565f89",
+        brightRed: "#ff899d",
+        brightGreen: "#b9f27c",
+        brightYellow: "#ff9e64",
+        brightBlue: "#8db0ff",
+        brightMagenta: "#c7a4ff",
+        brightCyan: "#a4dbff",
+        brightWhite: "#e5e6ee"
+      },
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -66,16 +90,36 @@ export function TerminalPane({ paneId }: Props) {
       socket.send(new TextEncoder().encode(data));
     });
 
+    let lastRows = 0;
+    let lastCols = 0;
+    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+
     const resizeObserver = new ResizeObserver(() => {
-      fit.fit();
-      const { rows, cols } = term;
-      void fetch(`${getHttpBase()}/api/v1/terminal/${paneId}/resize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows, cols }),
-      }).catch(() => {});
+      // Use requestAnimationFrame to prevent ResizeObserver loop limit exceeded errors
+      requestAnimationFrame(() => {
+        try {
+          fit.fit();
+          const { rows, cols } = term;
+          if (rows === lastRows && cols === lastCols) return;
+          if (!rows || !cols) return;
+          lastRows = rows;
+          lastCols = cols;
+
+          if (resizeTimeout) clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(() => {
+            void fetch(`${getHttpBase()}/api/v1/terminal/${paneId}/resize`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ rows, cols }),
+            }).catch(() => {});
+          }, 100);
+        } catch (e) {
+          // Ignore fit errors if container is not ready
+        }
+      });
     });
-    resizeObserver.observe(containerRef.current);
+
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
 
     return () => {
       resizeObserver.disconnect();
@@ -87,5 +131,9 @@ export function TerminalPane({ paneId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- paneId is the only thing that should re-run this
   }, [paneId]);
 
-  return <div ref={containerRef} className="terminal-pane" />;
+  return (
+    <div className="terminal-pane">
+      <div ref={containerRef} style={{ flex: 1, minHeight: 0, minWidth: 0 }} />
+    </div>
+  );
 }

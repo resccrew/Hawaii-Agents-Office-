@@ -18,7 +18,8 @@ export function useSpriteTexture(path: string | null): Texture | null {
       return;
     }
     let cancelled = false;
-    Assets.load(path)
+    const fullPath = path.startsWith('/') ? window.location.origin + path : path;
+    Assets.load(fullPath)
       .then((tex: Texture) => {
         // Bugfix: the background (1024x559) is upscaled ~1.14x to cover the
         // 960x640 stage, and every character sprite is scaled too — PixiJS

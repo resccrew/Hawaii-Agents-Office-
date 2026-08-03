@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { getHttpBase } from "@/systems/backendUrl";
+import { getHttpBase, fetchWithRetry } from "@/systems/backendUrl";
 
 export interface Workspace {
   id: string;
@@ -31,7 +31,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set, get) => ({
   refresh: async () => {
     set({ loading: true, error: null });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/workspaces`);
+      const resp = await fetchWithRetry(`${getHttpBase()}/api/v1/workspaces`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       set({ workspaces: data.workspaces ?? [], activeId: data.activeId ?? null });
