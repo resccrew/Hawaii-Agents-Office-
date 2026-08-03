@@ -38,9 +38,43 @@ class TerminalRegistry:
     def __init__(self) -> None:
         self._panes: dict[str, LivePane] = {}
 
-    def create(self, *, workspace_id: str, kind: TerminalKind, cwd: str) -> TerminalPane:
+    async def create(self, *, workspace_id: str, kind: TerminalKind, cwd: str) -> TerminalPane:
         pane_id = f"pane-{uuid.uuid4().hex[:10]}"
-        proc = terminal_service.spawn(cwd, _COMMANDS.get(kind))
+        cmd = _COMMANDS.get(kind)
+        env = None
+
+        if kind == "claude":
+            from app.core.agent_registry import get_agent_registry
+            from app.core.agent_spawner import _emit_session_start
+            import os
+            
+            # Auto-register an agent session so the interactive terminal
+            # has full MCP capabilities and appears on the Board.
+            registry = get_agent_registry()
+            agent = registry.create(
+                provider="claude",
+                department_id="Engineering",
+                role="Terminal Operator",
+                name=f"Term {pane_id[-4:]}",
+            )
+            # Claude generates its own session ID unless we provide one.
+            # We enforce our own ID so we can link the hook events to this agent.
+            claude_session_id = f"term-{uuid.uuid4().hex}"
+            agent.claude_session_id = claude_session_id
+            agent.status = "active"
+            registry.save()
+
+            # Pass the MCP config to the interactive PTY
+            cmd = ["claude", "--mcp-config", str(agent.mcp_config_path)]
+            
+            # Pass the enforced session ID in the environment so the hook script captures it
+            env = os.environ.copy()
+            env["CLAUDE_SESSION_ID"] = claude_session_id
+            
+            # Emit start so it appears on the board immediately
+            await _emit_session_start(agent)
+
+        proc = terminal_service.spawn(cwd, cmd, env=env)
         pane = TerminalPane(id=pane_id, workspace_id=workspace_id, kind=kind)
         self._panes[pane_id] = LivePane(pane=pane, proc=proc)
 

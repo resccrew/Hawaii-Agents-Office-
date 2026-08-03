@@ -32,7 +32,7 @@ class ResizeRequest(BaseModel):
 async def create_pane(payload: CreatePaneRequest) -> TerminalPane:
     registry = get_terminal_registry()
     try:
-        return registry.create(workspace_id=payload.workspace_id, kind=payload.kind, cwd=payload.cwd)
+        return await registry.create(workspace_id=payload.workspace_id, kind=payload.kind, cwd=payload.cwd)
     except OSError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

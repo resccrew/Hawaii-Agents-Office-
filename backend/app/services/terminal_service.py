@@ -47,7 +47,7 @@ def _set_nonblocking(fd: int) -> None:
     fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 
-def spawn(cwd: str, command: list[str] | None = None) -> PtyProcess:
+def spawn(cwd: str, command: list[str] | None = None, env: dict[str, str] | None = None) -> PtyProcess:
     """Forks a child with a real controlling TTY. Defaults to the user's own
     $SHELL; pass `command` (e.g. ["claude"]) to run something else
     interactively instead — no `-p`, so it gets its own normal TUI, unlike
@@ -72,6 +72,8 @@ def spawn(cwd: str, command: list[str] | None = None) -> PtyProcess:
             except Exception:
                 pass
             
+            if env:
+                os.environ.update(env)
             os.environ["TERM"] = "xterm-256color"
             os.environ["COLORTERM"] = "truecolor"
             os.environ["FORCE_COLOR"] = "1"
