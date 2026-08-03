@@ -24,6 +24,7 @@ _COMMANDS: dict[str, list[str] | None] = {
     "shell": None,
     "claude": ["claude"],
     "codex": ["codex"],
+    "antigravity": ["gemini"],
 }
 
 

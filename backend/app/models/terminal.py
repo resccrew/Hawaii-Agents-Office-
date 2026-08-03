@@ -6,7 +6,7 @@ from pydantic.alias_generators import to_camel
 
 __all__ = ["TerminalPane"]
 
-TerminalKind = Literal["shell", "claude", "codex"]
+TerminalKind = Literal["shell", "claude", "codex", "antigravity"]
 TerminalStatus = Literal["running", "exited"]
 
 

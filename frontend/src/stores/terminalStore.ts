@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { getHttpBase } from "@/systems/backendUrl";
 
-export type TerminalKind = "shell" | "claude" | "codex";
+export type TerminalKind = "shell" | "claude" | "codex" | "antigravity";
 export type TerminalStatus = "running" | "exited";
 
 export interface TerminalPane {

@@ -10,6 +10,7 @@ const KINDS: { value: TerminalKind; label: string }[] = [
   { value: "shell", label: "shell" },
   { value: "claude", label: "claude" },
   { value: "codex", label: "codex" },
+  { value: "antigravity", label: "antigravity" },
 ];
 
 interface Props {

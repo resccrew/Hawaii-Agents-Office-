@@ -56,6 +56,28 @@ def spawn(cwd: str, command: list[str] | None = None) -> PtyProcess:
     pid, fd = pty.fork()
     if pid == 0:  # child — replaced by argv, or exits before returning here
         try:
+            # When spawned from a daemon with no TTY (like the Tauri bundle),
+            # the OS may not provide sane PTY defaults. Ensure VERASE is 127
+            # (^?) so backspace from xterm.js isn't echoed as a literal space.
+            # ALSO critically enable IUTF8 so multi-byte characters (like Cyrillic)
+            # are erased as a single character, not half a byte (which corrupts UTF-8).
+            try:
+                import termios
+                attrs = termios.tcgetattr(0)
+                attrs[3] |= termios.ECHOE
+                attrs[6][termios.VERASE] = b'\x7f'
+                if hasattr(termios, 'IUTF8'):
+                    attrs[0] |= termios.IUTF8
+                termios.tcsetattr(0, termios.TCSANOW, attrs)
+            except Exception:
+                pass
+            
+            os.environ["TERM"] = "xterm-256color"
+            os.environ["COLORTERM"] = "truecolor"
+            os.environ["FORCE_COLOR"] = "1"
+            os.environ["CLICOLOR_FORCE"] = "1"
+            if "LANG" not in os.environ:
+                os.environ["LANG"] = "en_US.UTF-8"
             os.chdir(cwd)
             os.execvp(argv[0], argv)
         except OSError:
