@@ -49,6 +49,9 @@ class TaskBoard:
             except Exception:  # noqa: BLE001 — a hook must never break the board
                 logger.exception("task board hook failed for %s %s", event, task.id)
 
+    def get(self, task_id: str) -> SharedTask | None:
+        return self._tasks.get(task_id)
+
     def list_for_department(self, department_id: str) -> list[SharedTask]:
         return sorted(
             (t for t in self._tasks.values() if t.department_id == department_id),

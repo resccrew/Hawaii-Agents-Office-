@@ -24,6 +24,13 @@ class ConnectionManager:
         # from room_channels (observation) so task CRUD broadcasts never
         # compete with state_update traffic, same reasoning as chat_channels.
         self.task_channels: dict[str, set[WebSocket]] = defaultdict(set)
+        # Phase 3 (BridgeSpace rework): PTY terminal panes, keyed by pane_id.
+        # The first genuinely binary + bidirectional channel in this
+        # codebase — every other channel here is JSON and server-push-only.
+        # Kept as its own registry/broadcast method (send_bytes, not
+        # send_json) rather than generalizing _broadcast for both framings;
+        # mixing text/binary in one method is a footgun, not an abstraction.
+        self.terminal_channels: dict[str, set[WebSocket]] = defaultdict(set)
 
     async def connect_session(self, session_id: str, ws: WebSocket) -> None:
         await ws.accept()
@@ -70,6 +77,25 @@ class ConnectionManager:
 
     async def broadcast_task(self, department_id: str, message: dict) -> None:
         await self._broadcast(self.task_channels.get(department_id, set()), message)
+
+    async def connect_terminal(self, pane_id: str, ws: WebSocket) -> None:
+        await ws.accept()
+        self.terminal_channels[pane_id].add(ws)
+
+    def disconnect_terminal(self, pane_id: str, ws: WebSocket) -> None:
+        self.terminal_channels[pane_id].discard(ws)
+        if not self.terminal_channels[pane_id]:
+            del self.terminal_channels[pane_id]
+
+    async def broadcast_terminal_bytes(self, pane_id: str, data: bytes) -> None:
+        dead: list[WebSocket] = []
+        for ws in self.terminal_channels.get(pane_id, set()):
+            try:
+                await ws.send_bytes(data)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.terminal_channels[pane_id].discard(ws)
 
     async def broadcast_session(self, session_id: str, message: dict) -> None:
         await self._broadcast(self.session_channels.get(session_id, set()), message)

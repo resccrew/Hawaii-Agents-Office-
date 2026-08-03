@@ -78,3 +78,22 @@ export async function updateTaskStatus(
     body: JSON.stringify({ status }),
   });
 }
+
+// Kanban drag-to-dispatch: spawns a coding agent against a task and moves
+// it to in_progress server-side. Errors (e.g. already dispatched) surface
+// to the caller instead of being swallowed — the board doesn't optimistically
+// move the card, so the caller should show the error if this rejects.
+export async function dispatchTask(
+  taskId: string,
+  apiBase = getHttpBase(),
+): Promise<void> {
+  const res = await fetch(`${apiBase}/api/v1/tasks/${taskId}/dispatch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.detail ?? `dispatch failed: HTTP ${res.status}`);
+  }
+}

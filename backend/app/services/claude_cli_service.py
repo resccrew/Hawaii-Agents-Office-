@@ -46,6 +46,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import shutil
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -64,6 +66,24 @@ class ChatChunk:
 
 class ClaudeCliError(ProviderError):
     """Raised when the CLI is missing, exits non-zero, or times out."""
+
+
+def _resolve_claude() -> str:
+    path = shutil.which("claude")
+    if path:
+        return path
+    home = os.path.expanduser("~")
+    extra_paths = [
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        f"{home}/.npm-global/bin",
+        f"{home}/.nvm/current/bin",
+        f"{home}/.cargo/bin",
+        f"{home}/.bun/bin"
+    ]
+    env_path = os.environ.get("PATH", "")
+    extended_path = env_path + ":" + ":".join(extra_paths)
+    return shutil.which("claude", path=extended_path) or "claude"
 
 
 async def send_headless_message(
@@ -98,7 +118,7 @@ async def send_headless_message(
     invocation is free to pick.
     """
     args = [
-        "claude",
+        _resolve_claude(),
         "-p",
         message,
         "--resume",
@@ -200,7 +220,7 @@ async def spawn_new_session(
     UI shows a "starting..." state for this one call, then switches to the
     normal streaming send_headless_message path for every turn after.
     """
-    args = ["claude", "-p", initial_prompt, "--output-format", "json"]
+    args = [_resolve_claude(), "-p", initial_prompt, "--output-format", "json"]
     if mcp_config_path:
         args += ["--mcp-config", mcp_config_path]
     if permission_mode:

@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import agents, chat, events, generate, git, settings, tasks, websockets
+from app.api.routes import agents, chat, events, generate, git, settings, tasks, terminal, websockets, workspaces
 from app.core.agent_spawner import rehydrate_office
 from app.core.autopilot import get_autopilot
 from app.core.ceo import ensure_ceo
@@ -16,6 +16,7 @@ from app.core.chat_bridge import get_chat_bridge
 from app.core.connection_manager import get_manager
 from app.core.department_config import load_studio_config
 from app.core.event_processor import get_processor
+from app.core.terminal_registry import get_terminal_registry
 
 STUDIO_TOML = Path(__file__).resolve().parent.parent / "studio.toml"
 
@@ -46,6 +47,11 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         ceo_task.cancel()
+        # Terminal panes are real long-lived child processes (shell/claude/
+        # codex) with no persistence to resurrect them from — kill them on
+        # shutdown so a `--reload` dev restart or app quit doesn't leak them
+        # the way the Tauri sidecar itself used to before its own fix.
+        get_terminal_registry().close_all()
 
 
 def create_app() -> FastAPI:
@@ -53,7 +59,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3010"],
+        allow_origins=["http://localhost:3010", "tauri://localhost", "http://tauri.localhost"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -73,9 +79,12 @@ def create_app() -> FastAPI:
     app.include_router(settings.router, prefix="/api/v1")
     app.include_router(git.router, prefix="/api/v1")
     app.include_router(tasks.rest_router, prefix="/api/v1")
+    app.include_router(workspaces.router, prefix="/api/v1")
+    app.include_router(terminal.rest_router, prefix="/api/v1")
     app.include_router(websockets.router)
     app.include_router(chat.ws_router)
     app.include_router(tasks.ws_router)
+    app.include_router(terminal.ws_router)
 
     @app.get("/health")
     async def health() -> dict:

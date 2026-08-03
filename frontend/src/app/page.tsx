@@ -8,24 +8,41 @@ import { ActivityLog } from "@/components/panels/ActivityLog";
 import { GitBar } from "@/components/panels/GitBar";
 import { SettingsModal } from "@/components/panels/SettingsModal";
 import { AddAgentButton } from "@/components/agents/AddAgentButton";
+import { WorkspaceTabs } from "@/components/panels/WorkspaceTabs";
+import { TaskBoard } from "@/components/tasks/TaskBoard";
+import { TerminalGrid } from "@/components/terminal/TerminalGrid";
 import { selectDepartmentId, useGameStore } from "@/stores/gameStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useRoomStore, selectRoomSessions } from "@/stores/roomStore";
 import { useAgentsStore, selectAgents, selectOnline } from "@/stores/agentsStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { useWorkspaceStore, selectActiveWorkspace } from "@/stores/workspaceStore";
+import { useTerminalStore } from "@/stores/terminalStore";
 import { CEO_SPOT } from "@/systems/layout";
 import { lastTargetOf } from "@/systems/officeMovement";
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@/components/game/StudioGame";
 import { connectOverview } from "@/systems/roomSocketController";
 import { useFitSize } from "@/systems/useFitSize";
 
-// Layout: full-bleed office canvas on the left (cover-fit — no letterbox
-// bands), docked control panel (team roster + task board) on the right,
-// chat as a draggable popup floating over the clicked agent. Everyone
-// shares one room via the studio-wide /ws/overview feed.
+// Layout (Phase 2 of the BridgeSpace rework): the workspace tab strip +
+// active workspace's kanban board is now the primary screen — the
+// pixel-art office is a small decorative corner dock (still the same
+// RoomGame/pixi.js canvas, driven by the same studio-wide /ws/overview
+// feed, just no longer claiming the main content area). Chat still opens
+// as a draggable popup anchored to wherever the clicked sprite is inside
+// that dock.
 export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const departmentId = useGameStore(selectDepartmentId);
+  const activeWorkspace = useWorkspaceStore(selectActiveWorkspace);
+  // The kanban board (main content) follows the human's explicitly chosen
+  // workspace tab; the office dock keeps following whichever session the
+  // server happens to be observing (gameStore's own department) — these
+  // are deliberately independent now that the dock is decoration, not the
+  // primary navigation surface.
+  const boardDepartmentId = activeWorkspace?.departmentId ?? departmentId ?? "Engineering";
+  const [mainView, setMainView] = useState<"board" | "terminal">("board");
+  const refreshPanes = useTerminalStore((s) => s.refresh);
   const openChatPanel = useChatStore((s) => s.openPanel);
   const roomSessions = useRoomStore(selectRoomSessions);
   const agents = useAgentsStore(selectAgents);
@@ -40,6 +57,16 @@ export default function Home() {
     roomDisconnectRef.current = connectOverview();
     return () => roomDisconnectRef.current();
   }, []);
+
+  // Bugfix: panes are keyed by workspace id in the store, but nothing was
+  // re-fetching them when the active workspace changed while already on
+  // the terminal view — switching tabs showed the PREVIOUS workspace's
+  // (or an empty) pane list until some other action happened to trigger a
+  // refresh. Keep it in sync with whichever workspace is actually active.
+  const activeWorkspaceId = activeWorkspace?.id ?? null;
+  useEffect(() => {
+    if (activeWorkspaceId) void refreshPanes(activeWorkspaceId);
+  }, [activeWorkspaceId, refreshPanes]);
 
   // General settings → "reduce motion" — stamped on <html> so the CSS
   // attribute-selector twin of the OS prefers-reduced-motion query (see
@@ -100,7 +127,39 @@ export default function Home() {
       <aside className="side-panel-left">
         <ActivityLog />
       </aside>
-      <div ref={stageWrapperRef} className="game-stage-wrapper">
+      <div className="main-content">
+        <WorkspaceTabs />
+        <div className="main-view-tabs" role="tablist">
+          <button
+            role="tab"
+            aria-selected={mainView === "board"}
+            className={mainView === "board" ? "main-view-tab main-view-tab-active" : "main-view-tab"}
+            onClick={() => setMainView("board")}
+          >
+            board
+          </button>
+          <button
+            role="tab"
+            aria-selected={mainView === "terminal"}
+            className={mainView === "terminal" ? "main-view-tab main-view-tab-active" : "main-view-tab"}
+            onClick={() => setMainView("terminal")}
+          >
+            terminal
+          </button>
+        </div>
+        {mainView === "board" && <TaskBoard departmentId={boardDepartmentId} />}
+        {mainView === "terminal" &&
+          (activeWorkspace ? (
+            <TerminalGrid
+              workspaceId={activeWorkspace.id}
+              workspaceName={activeWorkspace.name}
+              cwd={activeWorkspace.repoPath}
+            />
+          ) : (
+            <div className="panel-empty">no workspace selected</div>
+          ))}
+      </div>
+      <div ref={stageWrapperRef} className="game-stage-wrapper" title="office (decorative)">
         <div
           className="game-canvas-frame"
           style={{ width: stageSize.width, height: stageSize.height }}
@@ -110,7 +169,7 @@ export default function Home() {
         </div>
       </div>
       <GitBar />
-      <SidePanel departmentId={departmentId ?? "Engineering"} onSelectAgent={handleSelectAgent} />
+      <SidePanel departmentId={boardDepartmentId} onSelectAgent={handleSelectAgent} />
     </main>
   );
 }

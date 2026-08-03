@@ -7,6 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from app.core.agent_spawner import SpawnError, spawn_agent
 from app.core.connection_manager import get_manager
 from app.core.task_board import get_task_board
 from app.models.tasks import SharedTask, TaskStatus
@@ -57,6 +58,65 @@ async def update_task(task_id: str, payload: UpdateTaskRequest) -> SharedTask:
     if task is None:
         raise HTTPException(status_code=404, detail="task not found")
     return task
+
+
+class DispatchTaskRequest(BaseModel):
+    # DevRole value (see models/agents.py) — which kind of agent to spawn
+    # against this task. "programmer" covers the common kanban case; the
+    # caller can override for e.g. a QA/design task.
+    role: str = "programmer"
+
+
+class DispatchTaskResponse(BaseModel):
+    task: SharedTask
+    agent_id: str
+    session_id: str
+
+
+@rest_router.post("/tasks/{task_id}/dispatch", response_model=DispatchTaskResponse)
+async def dispatch_task(task_id: str, payload: DispatchTaskRequest | None = None) -> DispatchTaskResponse:
+    """Kanban drag-to-dispatch: spawns a coding agent against a task and
+    moves it to in_progress. Deliberately its own endpoint rather than a
+    side effect of PATCH /tasks/{id} — a human manually self-claiming a
+    task (a plain status change) must not accidentally spawn an agent.
+
+    Composes three already-existing services rather than inventing new
+    orchestration: agent_spawner.spawn_agent (registry + provider spawn +
+    SESSION_START, the exact same pipeline POST /api/v1/agents uses) and
+    TaskBoard.update (which already broadcasts over the /ws/tasks channel
+    the kanban UI listens on).
+    """
+    board = get_task_board(get_manager())
+    task = board.get(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="task not found")
+    if task.assignee_agent_id:
+        raise HTTPException(status_code=409, detail="task already dispatched")
+
+    role = (payload.role if payload else None) or "programmer"
+    prompt = task.subject if not task.description else f"{task.subject}\n\n{task.description}"
+
+    try:
+        agent, _first_response = await spawn_agent(
+            provider="claude",
+            department_id=task.department_id,
+            role=role,
+            name=task.subject[:40],
+            initial_prompt=(
+                "You've been assigned this task from the shared kanban board:\n\n"
+                f"{prompt}\n\n"
+                "Work on it, then reply with a short summary of what you did — "
+                "the human reviews and marks it done from the board."
+            ),
+        )
+    except SpawnError as exc:
+        status_code = 400 if exc.stage == "provider" else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    updated = await board.update(task_id, status=TaskStatus.IN_PROGRESS, assignee_agent_id=agent.agent_id)
+    assert updated is not None  # task existed a moment ago and dispatch doesn't delete it
+    assert agent.claude_session_id is not None  # spawn_agent always sets this on success
+    return DispatchTaskResponse(task=updated, agent_id=agent.agent_id, session_id=agent.claude_session_id)
 
 
 @ws_router.websocket("/ws/tasks/{department_id}")

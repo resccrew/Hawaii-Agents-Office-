@@ -314,24 +314,306 @@ body {
 /* ========================= office stage ============================= */
 /* Full-bleed office between the docked panels, seated with an inner
    vignette so the warm pixel scene reads as a live "viewport". */
+/* Demoted to a decorative corner dock (Phase 2 of the BridgeSpace rework):
+   the workspace/kanban area behind it is now the primary screen. Still the
+   exact same RoomGame/pixi.js canvas + ChatLayer, just constrained to a
+   small floating box instead of the full stage — useFitSize measures this
+   element's actual rendered size, so shrinking it here is enough; no
+   changes needed on the pixi/rendering side. */
 .game-stage-wrapper {
   position: fixed;
-  top: var(--toolbar-h);
-  bottom: var(--gitbar-h);
-  left: var(--panel-w-left);
-  right: var(--panel-w);
+  top: auto;
+  bottom: calc(var(--gitbar-h) + 14px);
+  left: auto;
+  right: calc(var(--panel-w) + 14px);
+  width: 320px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background: var(--bg-0);
-  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.5), inset 0 0 140px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg), inset 0 0 60px rgba(0, 0, 0, 0.4);
+  z-index: 20;
 }
 
 .game-canvas-frame {
   position: relative;
   flex: 0 0 auto;
   display: block;
+}
+
+/* ========================= main content (Phase 2) ==================== */
+/* Fills the space the office used to occupy full-bleed — workspace tabs
+   on top, the active workspace's kanban board filling the rest. The
+   pixel-office dock floats on top of this, corner-anchored. */
+.main-content {
+  position: fixed;
+  top: var(--toolbar-h);
+  bottom: var(--gitbar-h);
+  left: var(--panel-w-left);
+  right: var(--panel-w);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-0);
+}
+.main-content .tasks-tab {
+  flex: 1;
+  min-height: 0;
+}
+
+.main-view-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+  padding: 6px 12px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.main-view-tab {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+}
+.main-view-tab:hover {
+  color: var(--text-2);
+}
+.main-view-tab-active {
+  color: var(--text-1);
+  border-bottom-color: var(--ocean);
+}
+
+/* ============================ terminal grid ============================ */
+/* Multi-pane terminal grid — panes sit side by side in one resizable
+   react-resizable-panels Group (see TerminalGrid.tsx). */
+.terminal-grid {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0e0819;
+}
+.terminal-grid-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.terminal-grid-toolbar select {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  border-radius: var(--r-sm);
+}
+.terminal-grid-toolbar button {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+.terminal-grid-toolbar button:hover:not(:disabled) {
+  background: var(--bg-4);
+  color: var(--text-1);
+}
+.terminal-grid-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.terminal-grid-error {
+  font-size: 11px;
+  color: var(--danger);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-panel-group {
+  flex: 1;
+  min-height: 0;
+}
+.terminal-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+.terminal-separator {
+  width: 4px;
+  background: var(--border);
+  cursor: col-resize;
+  transition: background var(--t-fast);
+}
+.terminal-separator:hover,
+.terminal-separator[data-active] {
+  background: var(--ocean);
+}
+
+.terminal-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px;
+}
+.terminal-pane .xterm {
+  height: 100%;
+}
+.terminal-pane-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border);
+}
+.terminal-pane-toolbar button {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  border-radius: var(--r-sm);
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.terminal-pane-toolbar button:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.terminal-pane-exited {
+  color: var(--danger);
+}
+
+/* =========================== workspace tabs =========================== */
+.workspace-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  height: 42px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.workspace-tabs-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+}
+.workspace-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.workspace-tab:hover {
+  color: var(--text-2);
+  background: var(--bg-2);
+}
+.workspace-tab-active {
+  color: var(--text-1);
+  background: var(--bg-3);
+}
+.workspace-tab-close {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.workspace-tab-close:hover {
+  color: var(--danger);
+}
+.workspace-tab-add {
+  background: none;
+  border: 1px dashed var(--border-strong);
+  color: var(--text-3);
+  border-radius: var(--r-sm);
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.workspace-tab-add:hover {
+  color: var(--text-1);
+  border-color: var(--ocean);
+}
+.workspace-tab-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.workspace-tab-form input {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  border-radius: var(--r-sm);
+  width: 140px;
+}
+.workspace-tab-form button {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 5px 9px;
+  font-size: 11px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.workspace-tab-form-cancel {
+  color: var(--text-3);
+}
+.workspace-tabs-error {
+  font-size: 11px;
+  color: var(--danger);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-tabs-path {
+  margin-left: auto;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
 }
 
 /* ============================ git bar =============================== */
@@ -1214,6 +1496,84 @@ body {
   display: flex;
   flex-direction: column;
   gap: 9px;
+}
+
+.task-dispatch-error {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--danger, #e0554f);
+  background: var(--sunset-weak);
+  border-bottom: 1px solid var(--border);
+}
+.task-dispatch-error button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+/* Kanban board: three columns (open / in_progress / done), drag a card
+   between them. Cards dropped into "in progress" with no assignee yet
+   dispatch a coding agent (see TaskBoard.tsx's handleDrop). */
+.kanban-board {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px;
+  min-height: 0;
+}
+.kanban-column {
+  flex: 1 1 0;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  min-height: 0;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.kanban-column-dragover {
+  border-color: var(--ocean);
+  background: var(--ocean-weak);
+}
+.kanban-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+}
+.kanban-column-count {
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+.kanban-column-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.panel-empty-compact {
+  padding: 16px 8px;
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
 }
 
 .task-item {
