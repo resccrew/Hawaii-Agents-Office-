@@ -100,6 +100,14 @@ export function TerminalPane({ paneId }: Props) {
         try {
           fit.fit();
           const { rows, cols } = term;
+          
+          // Force a redraw. When the container becomes visible again after being 
+          // hidden (tab switch) or minimized, the canvas might be blank. Even if 
+          // rows/cols didn't change, we should refresh the viewport.
+          if (rows > 0) {
+            term.refresh(0, rows - 1);
+          }
+
           if (rows === lastRows && cols === lastCols) return;
           if (!rows || !cols) return;
           lastRows = rows;

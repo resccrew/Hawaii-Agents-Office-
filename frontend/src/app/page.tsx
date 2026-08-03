@@ -147,17 +147,34 @@ export default function Home() {
             </button>
           </div>
         </div>
-        {mainView === "board" && <TaskBoard departmentId={boardDepartmentId} />}
-        {mainView === "terminal" &&
-          (activeWorkspace ? (
-            <TerminalGrid
-              workspaceId={activeWorkspace.id}
-              workspaceName={activeWorkspace.name}
-              cwd={activeWorkspace.repoPath}
-            />
-          ) : (
-            <div className="panel-empty">no workspace selected</div>
-          ))}
+        <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+          <div style={{
+            position: "absolute", inset: 0,
+            display: "flex", flexDirection: "column",
+            visibility: mainView === "board" ? "visible" : "hidden",
+            pointerEvents: mainView === "board" ? "auto" : "none",
+            opacity: mainView === "board" ? 1 : 0
+          }}>
+            <TaskBoard departmentId={boardDepartmentId} />
+          </div>
+          <div style={{
+            position: "absolute", inset: 0,
+            display: "flex", flexDirection: "column",
+            visibility: mainView === "terminal" ? "visible" : "hidden",
+            pointerEvents: mainView === "terminal" ? "auto" : "none",
+            opacity: mainView === "terminal" ? 1 : 0
+          }}>
+            {activeWorkspace ? (
+              <TerminalGrid
+                workspaceId={activeWorkspace.id}
+                workspaceName={activeWorkspace.name}
+                cwd={activeWorkspace.repoPath}
+              />
+            ) : (
+              <div className="panel-empty">no workspace selected</div>
+            )}
+          </div>
+        </div>
       </div>
       <ChatLayer />
       {rightPanelOpen && (
