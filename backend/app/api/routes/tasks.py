@@ -4,9 +4,10 @@ into rest_router/ws_router so main.py mounts them under different prefixes."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from app.core import auth
 from app.core.agent_spawner import SpawnError, spawn_agent
 from app.core.connection_manager import get_manager
 from app.core.task_board import get_task_board
@@ -120,7 +121,9 @@ async def dispatch_task(task_id: str, payload: DispatchTaskRequest | None = None
 
 
 @ws_router.websocket("/ws/tasks/{department_id}")
-async def ws_tasks(websocket: WebSocket, department_id: str) -> None:
+async def ws_tasks(
+    websocket: WebSocket, department_id: str, _auth: None = Depends(auth.enforce_ws_auth)
+) -> None:
     manager = get_manager()
     await manager.connect_task(department_id, websocket)
     try:

@@ -55,7 +55,15 @@ class WorkspaceRegistry:
         self._seed_from_git_ops()
 
     def create(self, *, name: str, repo_path: str, department_id: str) -> Workspace:
-        resolved = str(Path(repo_path).expanduser().resolve())
+        resolved_path = Path(repo_path).expanduser().resolve()
+        # Checked (and rejected) *before* the dict mutation below — this
+        # used to call git_ops.add_repo() only after already inserting the
+        # entry into self._workspaces, so a path outside the allowlist left
+        # a half-registered workspace in memory even though the client got
+        # a 400 and the on-disk snapshot was never written.
+        if not git_ops.is_allowed_repo_path(resolved_path):
+            raise ValueError(f"path is outside the allowed roots: {resolved_path}")
+        resolved = str(resolved_path)
         if not git_ops.is_git_repo(resolved):
             raise ValueError(f"not a git repository: {resolved}")
         entry = WorkspaceEntry(
