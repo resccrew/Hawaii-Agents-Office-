@@ -12,6 +12,12 @@ export interface UiSettings {
   defaultDepartment: string;
   reduceMotion: boolean;
   theme: "hawaii" | "terminal";
+  // Desktop-native affordances (see systems/desktopBridge.ts) — frontend-only
+  // preferences, same as the rest of this store; the actual notification/
+  // tray/badge/hotkey plumbing lives in src-tauri and no-ops entirely when
+  // this is running as a plain browser tab (no Tauri bridge).
+  desktopNotificationsEnabled: boolean;
+  desktopHotkey: string;
 }
 
 interface UiSettingsStore extends UiSettings {
@@ -19,6 +25,8 @@ interface UiSettingsStore extends UiSettings {
   setDefaultDepartment: (dept: string) => void;
   setReduceMotion: (on: boolean) => void;
   setTheme: (theme: "hawaii" | "terminal") => void;
+  setDesktopNotificationsEnabled: (on: boolean) => void;
+  setDesktopHotkey: (shortcut: string) => void;
   reset: () => void;
 }
 
@@ -27,6 +35,8 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   defaultDepartment: "Engineering",
   reduceMotion: false,
   theme: "hawaii",
+  desktopNotificationsEnabled: true,
+  desktopHotkey: "CmdOrCtrl+Shift+H",
 };
 
 export const useUiSettingsStore = create<UiSettingsStore>()(
@@ -38,6 +48,8 @@ export const useUiSettingsStore = create<UiSettingsStore>()(
       setDefaultDepartment: (defaultDepartment) => set({ defaultDepartment }),
       setReduceMotion: (reduceMotion) => set({ reduceMotion }),
       setTheme: (theme) => set({ theme }),
+      setDesktopNotificationsEnabled: (desktopNotificationsEnabled) => set({ desktopNotificationsEnabled }),
+      setDesktopHotkey: (desktopHotkey) => set({ desktopHotkey: desktopHotkey.trim() || DEFAULT_UI_SETTINGS.desktopHotkey }),
       reset: () => set(DEFAULT_UI_SETTINGS),
     }),
     { name: "studio-ops-ui-settings" },

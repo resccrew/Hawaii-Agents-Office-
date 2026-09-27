@@ -18,6 +18,7 @@ import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useWorkspaceStore, selectActiveWorkspace } from "@/stores/workspaceStore";
 import { useTerminalStore } from "@/stores/terminalStore";
 import { connectOverview } from "@/systems/roomSocketController";
+import { startDesktopBridge } from "@/systems/desktopBridge";
 
 // Layout (Phase 2 of the BridgeSpace rework): the workspace tab strip +
 // active workspace's kanban board is now the primary screen — the
@@ -53,6 +54,11 @@ export default function Home() {
     roomDisconnectRef.current = connectOverview();
     return () => roomDisconnectRef.current();
   }, []);
+
+  // Notifications/dock badge/tray/hotkey (see systems/desktopBridge.ts) —
+  // reads the same roomStore this same effect's connectOverview() feeds,
+  // no separate WS connection. No-ops in a plain browser dev session.
+  useEffect(() => startDesktopBridge(), []);
 
   // Bugfix: panes are keyed by workspace id in the store, but nothing was
   // re-fetching them when the active workspace changed while already on
