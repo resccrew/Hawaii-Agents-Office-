@@ -42,13 +42,24 @@ async def lifespan(app: FastAPI):
     # booting). Chained so kickstart can't run before there's a CEO to drive.
     async def _boot_studio() -> None:
         await ensure_ceo()
-        await get_autopilot(get_manager(), get_processor(get_manager())).kickstart()
+        autopilot = get_autopilot(get_manager(), get_processor(get_manager()))
+        await autopilot.kickstart()
+        # 15-minute belt-and-suspenders sweep on top of the event-driven
+        # edges kickstart/create/idle already cover — see autopilot.py.
+        # Started only after kickstart so the very first sweep isn't racing
+        # the initial resume.
+        autopilot.start_periodic_check()
 
     ceo_task = asyncio.create_task(_boot_studio())
     try:
         yield
     finally:
         ceo_task.cancel()
+        try:
+            await ceo_task
+        except asyncio.CancelledError:
+            pass
+        get_autopilot(get_manager(), get_processor(get_manager())).stop_periodic_check()
         # Terminal panes are real long-lived child processes (shell/claude/
         # codex) with no persistence to resurrect them from — kill them on
         # shutdown so a `--reload` dev restart or app quit doesn't leak them

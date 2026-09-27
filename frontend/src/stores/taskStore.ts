@@ -80,6 +80,15 @@ export async function updateTaskStatus(
   });
 }
 
+export async function deleteTask(
+  taskId: string,
+  apiBase = getHttpBase(),
+): Promise<void> {
+  await authedFetch(`${apiBase}/api/v1/tasks/${taskId}`, {
+    method: "DELETE",
+  });
+}
+
 // Kanban drag-to-dispatch: spawns a coding agent against a task and moves
 // it to in_progress server-side. Errors (e.g. already dispatched) surface
 // to the caller instead of being swallowed — the board doesn't optimistically

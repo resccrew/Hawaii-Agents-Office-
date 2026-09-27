@@ -61,6 +61,15 @@ async def update_task(task_id: str, payload: UpdateTaskRequest) -> SharedTask:
     return task
 
 
+@rest_router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str) -> dict:
+    board = get_task_board(get_manager())
+    task = await board.delete(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="task not found")
+    return {"taskId": task_id, "status": "deleted"}
+
+
 class DispatchTaskRequest(BaseModel):
     # DevRole value (see models/agents.py) — which kind of agent to spawn
     # against this task. "programmer" covers the common kanban case; the

@@ -49,6 +49,20 @@ logger = logging.getLogger("studio_ops.autopilot")
 # board.
 MAX_STALL_NUDGES = 1
 
+# Belt-and-suspenders sweep on top of the event-driven edges above: every 15
+# minutes, check whether there's unfinished work (including tasks marked
+# in_progress) that nobody appears to be actively driving — the gap none of
+# the event-driven edges can see is a task an agent was assigned to but
+# silently stopped working on without ever hitting the Stop/idle hook (a
+# dropped hook, a crashed subprocess). If the board is clear or genuinely
+# moving, this is a no-op — no CEO turn, no cost.
+PERIODIC_INTERVAL_SECONDS = 15 * 60
+# Same anti-runaway idea as MAX_STALL_NUDGES, tracked separately (this sweep
+# uses a different definition of "actionable" — it also counts in_progress
+# tasks, which "idle" deliberately does not) so the two dedup counters don't
+# clobber each other.
+MAX_PERIODIC_STALL_NUDGES = 1
+
 
 def _truncate(text: str | None, limit: int = 240) -> str:
     if not text:
@@ -72,6 +86,12 @@ class Autopilot:
         self._lock = asyncio.Lock()
         self._last_open_sig: frozenset[str] | None = None
         self._stall = 0
+        # Dedup state for the periodic sweep — deliberately separate from
+        # the "idle" edge's own _last_open_sig/_stall (see
+        # MAX_PERIODIC_STALL_NUDGES above).
+        self._periodic_task: asyncio.Task | None = None
+        self._last_periodic_sig: frozenset[str] | None = None
+        self._periodic_stall = 0
 
     # -- registration ---------------------------------------------------
     def install(self) -> None:
@@ -80,6 +100,30 @@ class Autopilot:
         at startup (see get_autopilot)."""
         get_task_board(self.manager).register_hook(self._on_task_event)
         get_chat_bridge(self.manager, self.processor).register_idle_hook(self._on_session_idle)
+
+    def start_periodic_check(self) -> None:
+        """Start the 15-minute sweep. Safe to call more than once — a second
+        call is a no-op while the loop from the first is still running (e.g.
+        under `uvicorn --reload` re-entering create_app)."""
+        if not self.enabled or self._periodic_task is not None:
+            return
+        self._periodic_task = asyncio.create_task(self._periodic_loop())
+
+    def stop_periodic_check(self) -> None:
+        if self._periodic_task is not None:
+            self._periodic_task.cancel()
+            self._periodic_task = None
+
+    async def _periodic_loop(self) -> None:
+        while True:
+            await asyncio.sleep(PERIODIC_INTERVAL_SECONDS)
+            try:
+                await self._supervise("periodic")
+            except Exception:
+                # A failed sweep must not kill the loop — the next
+                # iteration retries in another 15 minutes rather than
+                # silently disabling the sweep until a restart.
+                logger.exception("autopilot: periodic sweep failed")
 
     # -- edges ----------------------------------------------------------
     async def _on_task_event(self, event: str, task: SharedTask) -> None:
@@ -190,6 +234,32 @@ class Autopilot:
                     return None
             else:
                 self._stall = 0
+        elif reason == "periodic":
+            # A worker is actively churning — don't interrupt; its eventual
+            # completion re-triggers the "idle" edge above.
+            if self._any_worker_busy(ceo):
+                return None
+            # The CEO itself is already mid-turn (queued/in-flight) — let it
+            # run rather than piling on a second nudge.
+            if bridge.is_busy(ceo.claude_session_id):
+                return None
+            # Unlike "idle", this also counts in_progress tasks — that's the
+            # whole point of the sweep: catch a task an agent was assigned
+            # but silently stopped working on (no worker busy, no Stop/idle
+            # hook ever fired to re-trigger the event-driven edges above).
+            stalled_sig = frozenset(t.id for t in pending)
+            if stalled_sig == self._last_periodic_sig:
+                self._periodic_stall += 1
+                if self._periodic_stall > MAX_PERIODIC_STALL_NUDGES:
+                    logger.info(
+                        "autopilot(periodic): stalled on %d task(s) across sweeps, staying quiet",
+                        len(pending),
+                    )
+                    return None
+            else:
+                self._periodic_stall = 0
+            self._last_periodic_sig = stalled_sig
+            return self._build_prompt(reason, task, pending, open_tasks)
         else:
             # Strong edge (new_task / task_done / resume) = real change; reset.
             self._stall = 0
@@ -204,7 +274,10 @@ class Autopilot:
         pending: list[SharedTask],
         open_tasks: list[SharedTask],
     ) -> str:
-        board_lines = "\n".join(_task_line(t) for t in pending)
+        display_pending = pending[:25]
+        board_lines = "\n".join(_task_line(t) for t in display_pending)
+        if len(pending) > 25:
+            board_lines += f"\n... and {len(pending) - 25} more unfinished tasks."
         playbook = (
             "Run this end-to-end, autonomously, without waiting for the human:\n"
             "1. Break each task into concrete subtasks with studio_create_task.\n"
@@ -239,6 +312,16 @@ class Autopilot:
             head = (
                 "[AUTOPILOT] The studio has unfinished tasks on the board. "
                 "Resume and drive them to completion."
+            )
+        elif reason == "periodic":
+            head = (
+                "[AUTOPILOT] Periodic 15-minute check-in: the board still has "
+                "unfinished work (including tasks marked in_progress) and no one "
+                "appears to be actively working right now. Check studio_list_agents "
+                "and studio_list_tasks — if an assignee has gone quiet on an "
+                "in_progress task, follow up with studio_send_message or reassign it. "
+                "If there's genuinely nothing actionable, say so briefly; otherwise "
+                "push the stalled work forward."
             )
         else:  # idle
             head = (

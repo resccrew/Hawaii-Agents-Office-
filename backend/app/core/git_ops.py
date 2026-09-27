@@ -47,7 +47,12 @@ def _run(args: list[str], cwd: str, *, timeout: float = 60.0) -> tuple[int, str,
             capture_output=True,
             text=True,
             timeout=timeout,
-            env={"GIT_TERMINAL_PROMPT": "0", **_git_env()},
+            # GIT_TERMINAL_PROMPT must come LAST so it can't be overridden by
+            # a stray GIT_TERMINAL_PROMPT=1 the user happens to have in their
+            # own environment (_git_env() inherits os.environ verbatim) —
+            # without this, git would hang waiting on a credential prompt
+            # nothing can answer instead of failing fast as intended.
+            env={**_git_env(), "GIT_TERMINAL_PROMPT": "0"},
         )
         return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
     except FileNotFoundError:

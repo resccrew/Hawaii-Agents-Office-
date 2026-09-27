@@ -207,6 +207,19 @@ async def studio_update_task(
 
 
 @mcp.tool()
+async def studio_delete_task(task_id: str) -> dict:
+    """Permanently remove a task from the shared board — for duplicates or
+    tasks that should never have existed. This is NOT how you close out
+    finished work: for that, use studio_update_task(status="done", result=...)
+    instead, since a done task's `result` is the record of what happened,
+    while a deleted task leaves no trace at all."""
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
+        resp = await client.delete(f"/api/v1/tasks/{task_id}")
+        resp.raise_for_status()
+        return resp.json()
+
+
+@mcp.tool()
 async def studio_memory_list(scope: str | None = None) -> list[dict]:
     """List the memory index for a scope — read this FIRST, before doing
     anything else, so you don't repeat work or re-learn something already

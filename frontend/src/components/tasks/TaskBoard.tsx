@@ -9,6 +9,7 @@ import {
   createTask,
   updateTaskStatus,
   dispatchTask,
+  deleteTask,
   type SharedTask,
 } from "@/stores/taskStore";
 import type { TaskStatus } from "@/stores/taskStore";
@@ -112,6 +113,17 @@ function TaskCard({
             <span aria-hidden="true">✓</span> done
           </button>
         )}
+        <button
+          className="task-item-delete"
+          title="permanently delete this task"
+          onClick={() => {
+            if (window.confirm(`Delete task "${task.subject}"? This can't be undone.`)) {
+              void deleteTask(task.id);
+            }
+          }}
+        >
+          <span aria-hidden="true">🗑</span>
+        </button>
       </div>
     </div>
   );

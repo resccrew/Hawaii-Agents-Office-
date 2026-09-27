@@ -102,6 +102,21 @@ class TaskBoard:
         await self._fire("updated", task)
         return task
 
+    async def delete(self, task_id: str) -> SharedTask | None:
+        """Permanently remove a task from the board. Unlike `update`, there
+        is no status meaning "gone" — a done task's `result` is deliberately
+        kept as the record of what happened; this is for tasks that should
+        never have existed (duplicates, mistakes) that create/update can't
+        express. Returns the removed task (for the "deleted" hook and the
+        caller's own response), or None if it was already gone."""
+        task = self._tasks.pop(task_id, None)
+        if task is None:
+            return None
+        self._save()
+        await self._broadcast(task.department_id)
+        await self._fire("deleted", task)
+        return task
+
     async def _broadcast(self, department_id: str) -> None:
         tasks = [t.model_dump(mode="json", by_alias=True) for t in self.list_for_department(department_id)]
         await self.manager.broadcast_task(

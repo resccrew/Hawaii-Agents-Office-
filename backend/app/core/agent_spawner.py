@@ -121,6 +121,13 @@ class SpawnError(Exception):
         self.stage = stage  # "provider" (400) | "runtime" (502)
 
 
+# Cost/blast-radius control: every spawn (human "+ agent" click, kanban
+# dispatch, or the CEO's own studio_spawn_agent) goes through this one
+# function, so capping it here caps the whole studio — an autopilot loop or
+# an over-eager CEO can't accidentally hire an unbounded team.
+MAX_AGENTS = 10
+
+
 async def spawn_agent(
     *,
     provider: str,
@@ -140,13 +147,23 @@ async def spawn_agent(
         raise SpawnError(f"unknown provider: {provider}", stage="provider")
 
     registry = get_agent_registry()
-    agent = registry.create(
+    # create_if_room checks the cap and inserts under one lock (see its
+    # docstring) — checking len(registry.list()) here first and calling
+    # create() separately would leave a window between the two where a
+    # concurrent spawn could slip through and overshoot MAX_AGENTS.
+    agent = await registry.create_if_room(
+        max_agents=MAX_AGENTS,
         provider=provider,
         department_id=department_id,
         role=role,
         name=name,
         sprite=sprite,
     )
+    if agent is None:
+        raise SpawnError(
+            f"agent limit reached ({MAX_AGENTS}) — remove an agent before spawning another",
+            stage="provider",
+        )
     if provider == "claude" and agent.workspace_dir:
         _write_memory_instructions(agent.workspace_dir)
 

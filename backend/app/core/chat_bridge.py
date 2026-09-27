@@ -59,6 +59,20 @@ class ChatBridge:
         self._cwds: dict[str, str | None] = {}
         self._idle_hooks: list[IdleHook] = []
         LOCK_DIR.mkdir(parents=True, exist_ok=True)
+        # Startup hygiene: a lock file is only ever meant to live for the
+        # duration of one `claude -p --resume` call (see module docstring —
+        # it's defense-in-depth, not load-bearing for correctness within
+        # this process). A hard kill (SIGKILL, crash) skips the `finally`
+        # that would normally remove it, leaving an orphan behind that would
+        # otherwise accumulate forever across restarts. Safe to clear all of
+        # them here: nothing can legitimately hold one across a fresh
+        # ChatBridge construction, since that only happens once per process
+        # at startup, before any send could be in flight.
+        for stale_lock in LOCK_DIR.glob("*.lock"):
+            try:
+                stale_lock.unlink()
+            except OSError:
+                pass
 
     def register_idle_hook(self, hook: IdleHook) -> None:
         """Register a callback fired (with the session_id) whenever a

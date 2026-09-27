@@ -15,7 +15,9 @@ session_id, so an agent's chat goes through the exact same
 
 from __future__ import annotations
 
+import asyncio
 import json
+import shutil
 import sys
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -101,7 +103,38 @@ def _write_mcp_config(workspace: Path, agent_id: str) -> str:
 class AgentRegistry:
     def __init__(self) -> None:
         self._agents: dict[str, AgentSession] = {}
+        # Guards the count-check + insert in create_if_room so two concurrent
+        # spawns can't both observe len() < MAX_AGENTS and both insert,
+        # overshooting the cap (TOCTOU). Not needed for create() itself,
+        # which has no await between its own check-free body, but making the
+        # check-and-insert atomic requires holding this across both steps.
+        self._lock = asyncio.Lock()
         self._load()
+
+    async def create_if_room(
+        self,
+        *,
+        max_agents: int,
+        provider: str,
+        department_id: str,
+        role: str,
+        name: str,
+        sprite: str | None = None,
+    ) -> AgentSession | None:
+        """Atomically check the agent cap and insert, under one lock — the
+        check and the insert must not be split by an `await`, or two
+        concurrent spawns could both pass the check before either inserts.
+        Returns None (no agent created) if already at `max_agents`."""
+        async with self._lock:
+            if len(self._agents) >= max_agents:
+                return None
+            return self.create(
+                provider=provider,
+                department_id=department_id,
+                role=role,
+                name=name,
+                sprite=sprite,
+            )
 
     def create(
         self,
@@ -179,11 +212,38 @@ class AgentRegistry:
         is its own `claude -p --resume` subprocess, see
         claude_cli_service.py's module docstring); this just makes the agent
         stop existing as far as /api/v1/agents and future spawns/chat are
-        concerned."""
-        existed = self._agents.pop(agent_id, None) is not None
-        if existed:
-            self.save()
-        return existed
+        concerned.
+
+        Also cleans up what would otherwise be left as orphans on disk: the
+        agent's own workspace (agent-workspaces/{id}/ — its memory, its
+        mcp-config.json, anything it wrote) and, if it had a claude session,
+        its chat-uploads/{session_id}/ attachment directory. Best-effort —
+        a failed cleanup must not stop the agent from being removed from the
+        registry, which is the part that actually matters for correctness."""
+        agent = self._agents.pop(agent_id, None)
+        if agent is None:
+            return False
+
+        if agent.workspace_dir:
+            workspace = Path(agent.workspace_dir)
+            if workspace.exists():
+                try:
+                    shutil.rmtree(workspace)
+                except OSError:
+                    pass
+
+        if agent.claude_session_id:
+            from app.core.attachments import ATTACH_ROOT
+
+            uploads_dir = ATTACH_ROOT / agent.claude_session_id
+            if uploads_dir.exists():
+                try:
+                    shutil.rmtree(uploads_dir)
+                except OSError:
+                    pass
+
+        self.save()
+        return True
 
     def save(self) -> None:
         """Best-effort JSON snapshot — never raises, so a disk hiccup can't

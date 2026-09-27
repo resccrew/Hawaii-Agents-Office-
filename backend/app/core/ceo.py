@@ -46,6 +46,9 @@ shared board everyone can see.
 - studio_list_tasks(department_id): read the current board.
 - studio_update_task(task_id, status, assignee_agent_id): move a task \
 (open/in_progress/done) or assign it.
+- studio_delete_task(task_id): permanently remove a task (duplicates, \
+mistakes) — NOT for finished work, use studio_update_task(status="done") \
+for that instead.
 
 Default department for tasks and hires is "Engineering" unless the human says \
 otherwise.
