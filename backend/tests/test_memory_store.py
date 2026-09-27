@@ -137,3 +137,62 @@ def test_fact_file_is_readable_plain_markdown(tmp_path) -> None:
     assert "name: Plain" in raw
     assert "type: reference" in raw
     assert raw.strip().endswith("Hello.")
+
+
+def test_write_sanitizes_name_with_newline_and_bracket() -> None:
+    """A name containing a raw newline and "]" must not corrupt the
+    MEMORY.md index line format (`- [name](slug.md) — description`) —
+    newlines/tabs collapse to spaces and structurally significant
+    characters are stripped before the index line is written."""
+    ms.write_memory(
+        ms.OFFICE_SCOPE,
+        "weird-name",
+        name="Bad]Name\nSecond Line",
+        description="desc\twith\ttabs",
+        type="project",
+        body="body",
+    )
+
+    index = ms.list_memory(ms.OFFICE_SCOPE)
+    assert len(index) == 1
+    entry = index[0]
+    assert entry.slug == "weird-name"
+    assert "\n" not in entry.name
+    assert "]" not in entry.name
+    assert "\t" not in entry.description
+
+    # Round-trips cleanly: the index file itself stays one line per fact.
+    scope_root = ms._scope_root(ms.OFFICE_SCOPE)
+    index_text = (scope_root / ms.INDEX_FILENAME).read_text()
+    lines = [line for line in index_text.splitlines() if line.startswith("- [")]
+    assert len(lines) == 1
+
+
+def test_concurrent_writes_all_land_in_index() -> None:
+    """20 threads each writing a distinct fact into the same scope must
+    all end up represented in MEMORY.md — without the flock-guarded
+    read-modify-write, two threads reading the same index before either
+    writes back would race and one write clobbers the other's line."""
+    import threading
+
+    barrier = threading.Barrier(20)
+
+    def _write(i: int) -> None:
+        barrier.wait()
+        ms.write_memory(
+            ms.OFFICE_SCOPE,
+            f"fact-{i}",
+            name=f"Fact {i}",
+            description="concurrent write",
+            type="project",
+            body=f"body {i}",
+        )
+
+    threads = [threading.Thread(target=_write, args=(i,)) for i in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    index = ms.list_memory(ms.OFFICE_SCOPE)
+    assert sorted(e.slug for e in index) == sorted(f"fact-{i}" for i in range(20))

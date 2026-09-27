@@ -26,7 +26,11 @@ from app.services.providers.base import ProviderError
 # see again once it scrolls out of context). Other providers (openai/
 # gemini/ollama) don't have an equivalent cwd-file convention, so this is
 # claude-only — see the provider gate in spawn_agent() below.
-MEMORY_INSTRUCTIONS = """# Memory
+MEMORY_BLOCK_BEGIN = "<!-- studio-ops:memory:begin -->"
+MEMORY_BLOCK_END = "<!-- studio-ops:memory:end -->"
+
+MEMORY_INSTRUCTIONS = f"""{MEMORY_BLOCK_BEGIN}
+# Memory
 
 You have a persistent memory at `studio_memory_*` MCP tools (studio_memory_list,
 studio_memory_read, studio_memory_write) — two scopes: your OWN agent memory
@@ -42,11 +46,34 @@ readable/writable by every agent, for project-wide facts and decisions).
   reader, or took real effort to find out. Use `scope="office"` for
   anything a teammate should also know; leave scope unset for your own
   private progress notes.
-"""
+{MEMORY_BLOCK_END}"""
 
 
 def _write_memory_instructions(workspace_dir: str) -> None:
-    Path(workspace_dir, "CLAUDE.md").write_text(MEMORY_INSTRUCTIONS, encoding="utf-8")
+    """Idempotently ensure the memory-discipline block is present in the
+    agent workspace's CLAUDE.md, WITHOUT clobbering any pre-existing user
+    content in that file (e.g. a workspace seeded from a real project
+    checkout that already has its own CLAUDE.md). The block is delimited
+    by MEMORY_BLOCK_BEGIN/END markers:
+    - file missing entirely -> create it with just the block.
+    - file exists, block present -> replace only the block in place.
+    - file exists, block absent -> append the block at the end.
+    """
+    path = Path(workspace_dir, "CLAUDE.md")
+    if not path.is_file():
+        path.write_text(MEMORY_INSTRUCTIONS + "\n", encoding="utf-8")
+        return
+
+    existing = path.read_text(encoding="utf-8")
+    start = existing.find(MEMORY_BLOCK_BEGIN)
+    end = existing.find(MEMORY_BLOCK_END)
+    if start != -1 and end != -1:
+        end += len(MEMORY_BLOCK_END)
+        new_content = existing[:start] + MEMORY_INSTRUCTIONS + existing[end:]
+    else:
+        sep = "" if existing.endswith("\n") else "\n"
+        new_content = existing + sep + "\n" + MEMORY_INSTRUCTIONS + "\n"
+    path.write_text(new_content, encoding="utf-8")
 
 
 async def _emit_session_start(agent: AgentSession) -> None:

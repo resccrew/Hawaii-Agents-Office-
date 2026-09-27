@@ -53,6 +53,24 @@ def _auth_headers() -> dict[str, str]:
 mcp = FastMCP("studio-ops")
 
 
+class InvalidMemoryScope(ValueError):
+    """Raised before any request reaches the backend when a caller passes a
+    scope other than its own agent id (implicit, via None) or "office"."""
+
+
+def _resolve_scope(scope: str | None) -> str:
+    """studio_memory_* tools only ever let a caller read/write its OWN
+    agent memory (scope omitted) or the shared "office" memory — never
+    another agent's private scope. Enforced here, before any HTTP request
+    is made, so a misbehaving agent can't even probe another agent's
+    memory over the network."""
+    if scope is None:
+        return CALLER_AGENT_ID
+    if scope == "office":
+        return scope
+    raise InvalidMemoryScope('scope must be omitted (your own agent memory) or "office" — got ' f"{scope!r}")
+
+
 @mcp.tool()
 async def studio_list_agents(department_id: str | None = None) -> list[dict]:
     """List agents currently registered in Studio Ops, optionally filtered
@@ -194,10 +212,11 @@ async def studio_memory_list(scope: str | None = None) -> list[dict]:
     anything else, so you don't repeat work or re-learn something already
     known. scope is "office" for the shared, project-wide memory (read by
     every agent) or omitted to use your own agent memory (your private,
-    persistent notes across every turn you've ever had). Returns
-    {slug, name, description} per fact — use studio_memory_read for the
-    full body of any that look relevant."""
-    target = scope or CALLER_AGENT_ID
+    persistent notes across every turn you've ever had). No other scope
+    value is allowed — you cannot list another agent's private memory.
+    Returns {slug, name, description} per fact — use studio_memory_read
+    for the full body of any that look relevant."""
+    target = _resolve_scope(scope)
     async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.get(f"/api/v1/memory/{target}")
         resp.raise_for_status()
@@ -207,8 +226,9 @@ async def studio_memory_list(scope: str | None = None) -> list[dict]:
 @mcp.tool()
 async def studio_memory_read(slug: str, scope: str | None = None) -> dict:
     """Read one memory fact's full body by slug (from studio_memory_list).
-    scope defaults to your own agent memory, same as studio_memory_list."""
-    target = scope or CALLER_AGENT_ID
+    scope defaults to your own agent memory, same as studio_memory_list —
+    only "office" or omitted (your own memory) are allowed."""
+    target = _resolve_scope(scope)
     async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.get(f"/api/v1/memory/{target}/{slug}")
         resp.raise_for_status()
@@ -231,8 +251,10 @@ async def studio_memory_write(
     decisions about the current work) | reference (pointers to where more
     detail lives). scope: "office" to share with every agent (project-wide
     facts, decisions, conventions), omitted for your own private agent
-    memory (progress notes, things specific to your own task)."""
-    target = scope or CALLER_AGENT_ID
+    memory (progress notes, things specific to your own task). No other
+    scope value is allowed — you cannot write into another agent's
+    private memory."""
+    target = _resolve_scope(scope)
     async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.put(
             f"/api/v1/memory/{target}/{slug}",

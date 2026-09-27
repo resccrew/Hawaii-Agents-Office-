@@ -21,10 +21,11 @@ one runaway agent can't fill the disk or corrupt a fact mid-write.
 
 from __future__ import annotations
 
+import fcntl
 import os
 import re
 import tempfile
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -46,6 +47,9 @@ MAX_FACT_BYTES = 32_000
 MAX_FACTS_PER_SCOPE = 500
 
 VALID_TYPES = ("user", "feedback", "project", "reference")
+
+MAX_INDEX_FIELD_LEN = 200
+LOCK_FILENAME = ".memory.lock"
 
 
 class MemoryError(ValueError):
@@ -122,6 +126,41 @@ def _fact_path(scope_root: Path, slug: str) -> Path:
 
 def _index_path(scope_root: Path) -> Path:
     return scope_root / INDEX_FILENAME
+
+
+def _sanitize_index_field(value: str) -> str:
+    """Make a name/description safe to embed in one line of the MEMORY.md
+    index (`- [name](slug.md) — description`, parsed back by
+    _INDEX_LINE_RE). Without this, a value containing a newline would
+    split into multiple lines and corrupt the index, and "]" in a name
+    or ")" in a slug-adjacent position could break the markdown-link
+    parse. Collapses all whitespace (incl. newlines/tabs) to single
+    spaces, strips characters that are structurally significant to the
+    line format, and truncates to a sane length."""
+    collapsed = re.sub(r"\s+", " ", value).strip()
+    collapsed = collapsed.replace("]", "").replace(")", "")
+    return collapsed[:MAX_INDEX_FIELD_LEN]
+
+
+@contextmanager
+def _index_lock(scope_root: Path):
+    """Exclusive lock guarding the index read-modify-write cycle for one
+    scope, so two concurrent writers (e.g. threads/processes both calling
+    write_memory for the same scope) can't both read the same index,
+    each append their own entry, and have the second write clobber the
+    first's — fcntl.flock blocks the second caller until the first
+    releases rather than racing."""
+    scope_root.mkdir(parents=True, exist_ok=True)
+    lock_path = scope_root / LOCK_FILENAME
+    fd = os.open(str(lock_path), os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
 
 
 def _atomic_write(path: Path, content: str) -> None:
@@ -237,15 +276,18 @@ def write_memory(scope: str, slug: str, *, name: str, description: str, type: st
         raise InvalidType(f"invalid type: {type!r} (must be one of {VALID_TYPES})")
     root = _scope_root(scope)
     path = _fact_path(root, slug)
-    content = _render_fact(name, description, type, body)
+    clean_name = _sanitize_index_field(name)
+    clean_description = _sanitize_index_field(description)
+    content = _render_fact(clean_name, clean_description, type, body)
     if len(content.encode("utf-8")) > MAX_FACT_BYTES:
         raise FactTooLarge(f"fact body too large (max {MAX_FACT_BYTES} bytes)")
-    if not path.exists():
-        existing_count = len(_read_index_entries(root))
-        if existing_count >= MAX_FACTS_PER_SCOPE:
-            raise TooManyFacts(f"scope {scope!r} already has {MAX_FACTS_PER_SCOPE} facts, the max")
-    _atomic_write(path, content)
-    _upsert_index(root, slug=slug, name=name, description=description)
+    with _index_lock(root):
+        if not path.exists():
+            existing_count = len(_read_index_entries(root))
+            if existing_count >= MAX_FACTS_PER_SCOPE:
+                raise TooManyFacts(f"scope {scope!r} already has {MAX_FACTS_PER_SCOPE} facts, the max")
+        _atomic_write(path, content)
+        _upsert_index(root, slug=slug, name=clean_name, description=clean_description)
     return read_memory(scope, slug)
 
 
@@ -254,5 +296,6 @@ def delete_memory(scope: str, slug: str) -> None:
     path = _fact_path(root, slug)
     if not path.is_file():
         raise FactNotFound(f"no such memory fact: {scope}/{slug}")
-    path.unlink()
-    _remove_from_index(root, slug)
+    with _index_lock(root):
+        path.unlink()
+        _remove_from_index(root, slug)

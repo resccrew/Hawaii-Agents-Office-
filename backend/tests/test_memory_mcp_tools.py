@@ -70,3 +70,25 @@ async def test_write_rejects_invalid_type() -> None:
     with pytest.raises(httpx.HTTPStatusError) as exc_info:
         await tools.studio_memory_write("bad", "Bad", "d", "body", type="not-a-type", scope="office")
     assert exc_info.value.response.status_code == 400
+
+
+async def test_list_rejects_other_agents_scope(monkeypatch) -> None:
+    """A caller must never be able to read another agent's private
+    memory by simply passing its agent_id as scope — only "office" or
+    the implicit own-scope (None) are valid, and this is rejected before
+    any HTTP request is made."""
+    monkeypatch.setattr(tools, "CALLER_AGENT_ID", "agent-caller00000")
+    with pytest.raises(tools.InvalidMemoryScope):
+        await tools.studio_memory_list(scope="agent-someone-else")
+
+
+async def test_read_rejects_other_agents_scope(monkeypatch) -> None:
+    monkeypatch.setattr(tools, "CALLER_AGENT_ID", "agent-caller00000")
+    with pytest.raises(tools.InvalidMemoryScope):
+        await tools.studio_memory_read("slug", scope="agent-someone-else")
+
+
+async def test_write_rejects_other_agents_scope(monkeypatch) -> None:
+    monkeypatch.setattr(tools, "CALLER_AGENT_ID", "agent-caller00000")
+    with pytest.raises(tools.InvalidMemoryScope):
+        await tools.studio_memory_write("slug", "Name", "d", "body", scope="agent-someone-else")

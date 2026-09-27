@@ -65,3 +65,49 @@ async def test_non_claude_agent_gets_no_claude_md() -> None:
         provider="openai", department_id="engineering", role="programmer", name="GPT", initial_prompt="build X"
     )
     assert not Path(agent.workspace_dir, "CLAUDE.md").exists()
+
+
+def test_memory_instructions_preserves_existing_user_content(tmp_path) -> None:
+    """A workspace whose CLAUDE.md already has real user content (e.g.
+    seeded from a real project checkout) must keep that content verbatim
+    — only the memory block is added/updated, never a full overwrite."""
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    claude_md = workspace / "CLAUDE.md"
+    user_text = "# My Project\n\nSome important rules the human wrote.\n"
+    claude_md.write_text(user_text, encoding="utf-8")
+
+    spawner._write_memory_instructions(str(workspace))
+
+    content = claude_md.read_text(encoding="utf-8")
+    assert user_text.strip() in content
+    assert spawner.MEMORY_BLOCK_BEGIN in content
+    assert "studio_memory_write" in content
+
+
+def test_memory_instructions_idempotent_on_repeat_calls(tmp_path) -> None:
+    """Calling _write_memory_instructions twice (e.g. respawn) must not
+    duplicate the block or the user's own content — the second call
+    replaces only what's between the markers."""
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    claude_md = workspace / "CLAUDE.md"
+    claude_md.write_text("# My Project\n\nRule one.\n", encoding="utf-8")
+
+    spawner._write_memory_instructions(str(workspace))
+    spawner._write_memory_instructions(str(workspace))
+
+    content = claude_md.read_text(encoding="utf-8")
+    assert content.count(spawner.MEMORY_BLOCK_BEGIN) == 1
+    assert content.count(spawner.MEMORY_BLOCK_END) == 1
+    assert content.count("Rule one.") == 1
+    assert content.count(spawner.MEMORY_INSTRUCTIONS) == 1
+
+
+def test_memory_instructions_creates_file_when_missing(tmp_path) -> None:
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    spawner._write_memory_instructions(str(workspace))
+    content = (workspace / "CLAUDE.md").read_text(encoding="utf-8")
+    assert spawner.MEMORY_BLOCK_BEGIN in content
+    assert spawner.MEMORY_BLOCK_END in content
