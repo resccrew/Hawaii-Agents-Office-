@@ -53,6 +53,16 @@ jobs:
         working-directory: frontend
         run: npm run typecheck
 
+      # cargo check (and any other cargo invocation) fails without this:
+      # build.rs validates that tauri.conf.json's externalBin resource
+      # (binaries/studio-ops-backend-<target-triple>) exists on disk before
+      # it'll even type-check, not just before bundling. Verified locally —
+      # `cargo check` in a fresh checkout fails with "resource path ...
+      # doesn't exist" until this has run once.
+      - name: Backend — build sidecar (required by cargo check)
+        working-directory: backend
+        run: .venv/bin/python build_sidecar.py
+
       - name: Rust — cargo check (src-tauri)
         working-directory: src-tauri
         run: cargo check
