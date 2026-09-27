@@ -1,6 +1,7 @@
 "use client";
 
 import { useChatStore } from "@/stores/chatStore";
+import { authedFetch, wsUrlWithToken } from "./apiAuth";
 import { getHttpBase, getWsBase } from "./backendUrl";
 import { connectWithRetry } from "./reconnectingWebSocket";
 
@@ -9,7 +10,7 @@ import { connectWithRetry } from "./reconnectingWebSocket";
 // framing/backpressure must never compete with state_update broadcast.
 // Bugfix: now auto-reconnects instead of going silently dead on a drop.
 export function connectChat(sessionId: string, baseUrl = getWsBase()): () => void {
-  return connectWithRetry(`${baseUrl}/ws/chat/${sessionId}`, {
+  return connectWithRetry(() => wsUrlWithToken(`${baseUrl}/ws/chat/${sessionId}`), {
     onMessage: (event) => {
       let msg: Record<string, unknown>;
       try {
@@ -68,7 +69,7 @@ export async function sendChatMessage(
     text,
     attachments.map((a) => a.filename),
   );
-  await fetch(`${apiBase}/api/v1/chat/${sessionId}/messages`, {
+  await authedFetch(`${apiBase}/api/v1/chat/${sessionId}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
