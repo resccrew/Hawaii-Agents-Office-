@@ -61,6 +61,16 @@ class AgentSession:
     # determines which character sprite this agent renders with, independent
     # of its functional role. None means "use the role's default sprite".
     sprite: str | None = None
+    # Cost/usage running totals — accumulated from every hook event carrying
+    # these fields (EventDataBase.input_tokens/output_tokens/cache_*_tokens,
+    # see models/events.py) whose session_id resolves to this agent via
+    # AgentRegistry.find_by_claude_session. Surfaced on GET /api/v1/agents
+    # for the roster's per-agent token/cost badge — real, additive counters,
+    # not an estimate.
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_tokens: int = 0
+    cache_creation_tokens: int = 0
 
 
 def _write_mcp_config(workspace: Path, agent_id: str) -> str:
@@ -134,6 +144,34 @@ class AgentRegistry:
             if a.claude_session_id == claude_session_id:
                 return a
         return None
+
+    def accumulate_tokens(
+        self,
+        agent_id: str,
+        *,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        cache_read_tokens: int | None = None,
+        cache_creation_tokens: int | None = None,
+    ) -> None:
+        """Adds one event's token counts onto an agent's running totals.
+        Each hook event reports the tokens for that single turn/step, not a
+        cumulative total, so this always adds rather than replaces. A
+        no-op (not even a save()) when the event carried none of these
+        fields, which is the common case for most event types."""
+        agent = self._agents.get(agent_id)
+        if agent is None:
+            return
+        if not any(
+            v is not None
+            for v in (input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens)
+        ):
+            return
+        agent.input_tokens += input_tokens or 0
+        agent.output_tokens += output_tokens or 0
+        agent.cache_read_tokens += cache_read_tokens or 0
+        agent.cache_creation_tokens += cache_creation_tokens or 0
+        self.save()
 
     def remove(self, agent_id: str) -> bool:
         """Drops an agent from the registry. Doesn't kill anything at the OS
