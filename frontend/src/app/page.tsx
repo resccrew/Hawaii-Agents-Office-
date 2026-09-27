@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChatLayer } from "@/components/chat/ChatLayer";
 import { SidePanel } from "@/components/panels/SidePanel";
 import { ActivityLog } from "@/components/panels/ActivityLog";
+import { Timeline } from "@/components/timeline/Timeline";
 import { GitBar } from "@/components/panels/GitBar";
 import { SettingsModal } from "@/components/panels/SettingsModal";
 import { AddAgentButton } from "@/components/agents/AddAgentButton";
@@ -120,6 +121,7 @@ export default function Home() {
       {leftPanelOpen && (
         <aside className="side-panel-left">
           <ActivityLog />
+          <Timeline />
         </aside>
       )}
 

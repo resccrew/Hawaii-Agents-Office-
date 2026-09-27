@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from app.core.connection_manager import get_manager
 from app.core.event_processor import get_processor
 from app.models.events import EventAdapter
+from app.models.sessions import HistoryEntry
 
 router = APIRouter()
 
@@ -24,3 +25,22 @@ async def ingest_event(payload: dict) -> dict:
     processor = get_processor(get_manager())
     sm = await processor.process(event)
     return {"status": "ok", "session_id": sm.session_id}
+
+
+@router.get("/sessions/{session_id}/timeline")
+async def get_timeline(session_id: str) -> dict[str, str | list[HistoryEntry]]:
+    """Timeline/Replay feature: the frontend scrubber reads this once on
+    open (and the live WS state_update stream feeds it incrementally after
+    that — see EventProcessor.process's broadcast_session). Returns the same
+    ring buffer StateMachine._record_history maintains, oldest first, so the
+    frontend can reconstruct "what did the office look like at time t"
+    without re-deriving it from raw hook payloads.
+
+    404 (not 200 + empty list) when the session was never seen — lets the
+    frontend tell "no history yet" apart from "no such session".
+    """
+    processor = get_processor(get_manager())
+    sm = processor.state_machines.get(session_id)
+    if sm is None:
+        raise HTTPException(status_code=404, detail="unknown session_id")
+    return {"session_id": sm.session_id, "events": list(sm.history)}

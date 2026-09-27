@@ -28,6 +28,11 @@ from app.models.events import (
 )
 from app.models.sessions import ConversationEntry, GameState, HistoryEntry
 
+# See `_record_history`'s cap comment — kept as a module constant so the
+# REST timeline endpoint (events.py) and tests can reference the same number
+# instead of a magic literal drifting out of sync.
+TIMELINE_HISTORY_LIMIT = 2000
+
 # Event types that indicate the interactive terminal has an in-flight turn.
 _TURN_START_EVENTS = {EventType.USER_PROMPT_SUBMIT, EventType.PRE_TOOL_USE}
 # Event types that indicate the interactive terminal has gone idle again.
@@ -304,8 +309,12 @@ class StateMachine:
             )
         )
         # Cap history to avoid unbounded growth in long-running sessions.
-        if len(self.history) > 200:
-            self.history = self.history[-200:]
+        # This ring buffer also backs the Timeline/Replay feature (see
+        # GET /api/v1/sessions/{id}/timeline in api/routes/events.py) —
+        # 2000 entries at typical hook cadence covers a long working
+        # session while staying cheap to keep in memory and serialize.
+        if len(self.history) > TIMELINE_HISTORY_LIMIT:
+            self.history = self.history[-TIMELINE_HISTORY_LIMIT:]
 
     # -- snapshot -----------------------------------------------------------
 
