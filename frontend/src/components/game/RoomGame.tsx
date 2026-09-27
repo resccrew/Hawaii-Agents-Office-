@@ -26,6 +26,28 @@ const MAX_WORKERS = WORK_SEATS.length;
 // collapses to "curled up beside the owner" (see catMovement.ts).
 const CAT_BUSY_STATES = new Set(["working", "waiting_permission"]);
 
+// Simple vertical-stacking pass for speech bubbles (see SpeechBubble.tsx):
+// characters standing close together on stage would otherwise draw their
+// bubbles on top of each other. Clusters entries that currently have a
+// bubble by x-proximity, then staggers each cluster member's extra upward
+// offset by index — cheap, deterministic, no physics needed for an office
+// with a handful of characters on screen at once.
+const CLUSTER_DIST_PX = 140;
+const STACK_STEP_PX = 30;
+
+function computeBubbleStackOffsets(
+  items: { key: string; x: number; hasBubble: boolean }[],
+): Map<string, number> {
+  const offsets = new Map<string, number>();
+  const active = items.filter((i) => i.hasBubble).sort((a, b) => a.x - b.x);
+  let clusterStart = 0;
+  active.forEach((item, i) => {
+    if (i > 0 && item.x - active[i - 1].x > CLUSTER_DIST_PX) clusterStart = i;
+    offsets.set(item.key, (i - clusterStart) * STACK_STEP_PX);
+  });
+  return offsets;
+}
+
 export function RoomGame({ onAgentClick }: { onAgentClick?: (sessionId: string) => void }) {
   const sessions = useRoomStore(selectRoomSessions);
   const agents = useAgentsStore(selectAgents);
@@ -75,7 +97,37 @@ export function RoomGame({ onAgentClick }: { onAgentClick?: (sessionId: string) 
   const rendered = [
     ...ceos.map((session) => ({ session, isCeo: true, workerIndex: 0 })),
     ...visibleWorkers.map((session, i) => ({ session, isCeo: false, workerIndex: i })),
-  ];
+  ].map(({ session, isCeo, workerIndex }) => {
+    const lead = session.lead;
+    const busy = lead.state !== "idle";
+    const plan = planFor({ sessionId: session.sessionId, isCeo, workerIndex, busy });
+    // Where this Lead is walking to (or already at) — cats trail this
+    // rather than a frame-perfect live position, which LeadCapsule keeps
+    // privately internal.
+    const ownerPos = plan.path[plan.path.length - 1] ?? plan.position;
+    const catPlans = session.devs.map((dev) => ({
+      dev,
+      plan: planForCat(dev.id, ownerPos, CAT_BUSY_STATES.has(dev.state)),
+    }));
+    return { session, lead, plan, ownerPos, catPlans };
+  });
+
+  // One shared stacking pass across every Lead + cat currently on stage —
+  // see computeBubbleStackOffsets above.
+  const bubbleStackOffsets = computeBubbleStackOffsets([
+    ...rendered.map((r) => ({
+      key: r.session.sessionId,
+      x: r.ownerPos.x,
+      hasBubble: !!r.lead.bubble?.text,
+    })),
+    ...rendered.flatMap((r) =>
+      r.catPlans.map(({ dev, plan }) => ({
+        key: dev.id,
+        x: plan.position.x,
+        hasBubble: !!dev.bubble?.text,
+      })),
+    ),
+  ]);
 
   return (
     <Application
@@ -88,34 +140,29 @@ export function RoomGame({ onAgentClick }: { onAgentClick?: (sessionId: string) 
       <pixiContainer>
         <OfficeBackground />
         {debug && <ZoneDebugOverlay />}
-        {rendered.map(({ session, isCeo, workerIndex }) => {
-          const lead = session.lead;
-          const busy = lead.state !== "idle";
-          const plan = planFor({ sessionId: session.sessionId, isCeo, workerIndex, busy });
-          // Where this Lead is walking to (or already at) — cats trail
-          // this rather than a frame-perfect live position, which
-          // LeadCapsule keeps privately internal.
-          const ownerPos = plan.path[plan.path.length - 1] ?? plan.position;
-          return (
-            <pixiContainer key={session.sessionId}>
-              <LeadCapsule
-                plan={plan}
-                role={lead.role ?? null}
-                name={lead.name ?? null}
-                chatAvailable={lead.chatAvailable}
-                onClick={() => onAgentClick?.(session.sessionId)}
-                sprite={lead.sprite ?? null}
+        {rendered.map(({ session, lead, plan, catPlans }) => (
+          <pixiContainer key={session.sessionId}>
+            <LeadCapsule
+              plan={plan}
+              role={lead.role ?? null}
+              name={lead.name ?? null}
+              chatAvailable={lead.chatAvailable}
+              onClick={() => onAgentClick?.(session.sessionId)}
+              sprite={lead.sprite ?? null}
+              bubble={lead.bubble}
+              bubbleStackOffset={bubbleStackOffsets.get(session.sessionId) ?? 0}
+            />
+            {catPlans.map(({ dev, plan: catPlan }) => (
+              <CatCapsule
+                key={dev.id}
+                catIndex={dev.number}
+                plan={catPlan}
+                bubble={dev.bubble}
+                bubbleStackOffset={bubbleStackOffsets.get(dev.id) ?? 0}
               />
-              {session.devs.map((dev) => (
-                <CatCapsule
-                  key={dev.id}
-                  catIndex={dev.number}
-                  plan={planForCat(dev.id, ownerPos, CAT_BUSY_STATES.has(dev.state))}
-                />
-              ))}
-            </pixiContainer>
-          );
-        })}
+            ))}
+          </pixiContainer>
+        ))}
         {overflow > 0 && (
           <pixiContainer x={STAGE_WIDTH - 130} y={STAGE_HEIGHT - 26}>
             <LabelTag text={`+${overflow} more`} fontSize={14} color="#ffe08a" width={110} />

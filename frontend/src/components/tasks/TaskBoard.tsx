@@ -75,7 +75,14 @@ function TaskCard({
         role={isDone ? "button" : undefined}
         title={isDone ? "show result" : undefined}
       >
-        {isDone && <span className={`task-item-caret${isExpanded ? " task-item-caret-open" : ""}`}>▸</span>}
+        {isDone && (
+          <span
+            className={`task-item-caret${isExpanded ? " task-item-caret-open" : ""}`}
+            aria-hidden="true"
+          >
+            ▸
+          </span>
+        )}
         {task.subject}
       </div>
       {(task.assigneeAgentId || isDone) && (
@@ -95,9 +102,15 @@ function TaskCard({
         </div>
       )}
       <div className="task-item-actions">
-        {task.status === "done" && <button onClick={() => void updateTaskStatus(task.id, "open")}>↩ reopen</button>}
+        {task.status === "done" && (
+          <button onClick={() => void updateTaskStatus(task.id, "open")}>
+            <span aria-hidden="true">↩</span> reopen
+          </button>
+        )}
         {task.status === "in_progress" && (
-          <button onClick={() => void updateTaskStatus(task.id, "done")}>✓ done</button>
+          <button onClick={() => void updateTaskStatus(task.id, "done")}>
+            <span aria-hidden="true">✓</span> done
+          </button>
         )}
       </div>
     </div>

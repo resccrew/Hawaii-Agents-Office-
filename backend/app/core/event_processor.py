@@ -88,6 +88,21 @@ class EventProcessor:
 
         sm.apply(event)
 
+        # Roster token/cost badge (SidePanel) — every event's data may carry
+        # this turn's usage (EventDataBase.input_tokens/output_tokens/
+        # cache_*_tokens); accumulate it onto the spawned agent this
+        # session_id belongs to, if any (hook-observed sessions that aren't
+        # registry agents just have nowhere to accumulate into).
+        agent = get_agent_registry().find_by_claude_session(event.session_id)
+        if agent is not None:
+            get_agent_registry().accumulate_tokens(
+                agent.agent_id,
+                input_tokens=getattr(event.data, "input_tokens", None),
+                output_tokens=getattr(event.data, "output_tokens", None),
+                cache_read_tokens=getattr(event.data, "cache_read_tokens", None),
+                cache_creation_tokens=getattr(event.data, "cache_creation_tokens", None),
+            )
+
         if isinstance(event, ChatEvent):
             # Persist immediately (not batched) — a chat turn is exactly two
             # of these per turn (prompt, then response), so this is cheap,

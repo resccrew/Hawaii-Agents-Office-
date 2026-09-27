@@ -70,7 +70,7 @@ export function ActivityLog() {
       <div className="activity-log-list" ref={scrollRef} onScroll={handleScroll}>
         {entries.length === 0 && (
           <div className="panel-empty">
-            <span className="panel-empty-icon">▤</span>
+            <span className="panel-empty-icon" aria-hidden="true">▤</span>
             nothing yet
             <span className="panel-empty-hint">agent activity streams in here live</span>
           </div>

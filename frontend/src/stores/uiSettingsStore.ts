@@ -12,6 +12,11 @@ export interface UiSettings {
   defaultDepartment: string;
   reduceMotion: boolean;
   theme: "hawaii" | "terminal";
+  // Set once the "a macOS permission dialog is about to appear" notice
+  // (see TerminalGrid.tsx) has been shown once — persisted so it never
+  // nags again after the first terminal pane is opened, this session or
+  // any future one.
+  hasSeenTerminalAccessNotice: boolean;
 }
 
 interface UiSettingsStore extends UiSettings {
@@ -19,6 +24,7 @@ interface UiSettingsStore extends UiSettings {
   setDefaultDepartment: (dept: string) => void;
   setReduceMotion: (on: boolean) => void;
   setTheme: (theme: "hawaii" | "terminal") => void;
+  markTerminalAccessNoticeSeen: () => void;
   reset: () => void;
 }
 
@@ -27,6 +33,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   defaultDepartment: "Engineering",
   reduceMotion: false,
   theme: "hawaii",
+  hasSeenTerminalAccessNotice: false,
 };
 
 export const useUiSettingsStore = create<UiSettingsStore>()(
@@ -38,6 +45,7 @@ export const useUiSettingsStore = create<UiSettingsStore>()(
       setDefaultDepartment: (defaultDepartment) => set({ defaultDepartment }),
       setReduceMotion: (reduceMotion) => set({ reduceMotion }),
       setTheme: (theme) => set({ theme }),
+      markTerminalAccessNoticeSeen: () => set({ hasSeenTerminalAccessNotice: true }),
       reset: () => set(DEFAULT_UI_SETTINGS),
     }),
     { name: "studio-ops-ui-settings" },

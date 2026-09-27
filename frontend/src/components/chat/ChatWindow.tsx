@@ -204,7 +204,7 @@ export function ChatWindow({ sessionId, anchor, frame, zIndex }: Props) {
           <span className={`status-dot chat-dot-${session.status}`} />
           {title}
         </span>
-        <span className="chat-panel-grip">⠿</span>
+        <span className="chat-panel-grip" aria-hidden="true">⠿</span>
         <button onClick={() => closePanel(sessionId)} aria-label="close chat">✕</button>
       </div>
       <div className={`chat-panel-status chat-panel-status-${session.status}`}>
@@ -244,7 +244,7 @@ export function ChatWindow({ sessionId, anchor, frame, zIndex }: Props) {
         <div className="chat-panel-attachments">
           {pendingFiles.map((f, i) => (
             <span key={`${f.name}-${i}`} className="chat-attachment-chip">
-              📎 {f.name}
+              <span aria-hidden="true">📎</span> {f.name}
               <button onClick={() => removeFile(i)} aria-label={`remove ${f.name}`}>
                 ×
               </button>
@@ -287,7 +287,7 @@ export function ChatWindow({ sessionId, anchor, frame, zIndex }: Props) {
           aria-label="attach file"
           title="attach file"
         >
-          📎
+          <span aria-hidden="true">📎</span>
         </button>
         <input
           value={draft}

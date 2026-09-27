@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { TerminalPane } from "./TerminalPane";
 import { useTerminalStore, selectPanesFor, type TerminalKind } from "@/stores/terminalStore";
+import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { useFocusTrap } from "@/systems/useFocusTrap";
 
 const KINDS: { value: TerminalKind; label: string }[] = [
   { value: "shell", label: "shell" },
@@ -34,11 +36,33 @@ export function TerminalGrid({ workspaceId, workspaceName, cwd }: Props) {
   const error = useTerminalStore((s) => s.error);
   const [newKind, setNewKind] = useState<TerminalKind>("shell");
   const [creating, setCreating] = useState(false);
+  const hasSeenAccessNotice = useUiSettingsStore((s) => s.hasSeenTerminalAccessNotice);
+  const markAccessNoticeSeen = useUiSettingsStore((s) => s.markTerminalAccessNoticeSeen);
+  const [pendingNotice, setPendingNotice] = useState(false);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
 
-  const handleAdd = async () => {
+  const actuallyCreate = async () => {
     setCreating(true);
     await create(workspaceId, cwd, newKind);
     setCreating(false);
+  };
+
+  const handleAdd = async () => {
+    // First-ever terminal pane on macOS triggers the OS's own "give this
+    // app access to your files/folders" prompt the moment the PTY tries to
+    // read the workspace's cwd — surprising and unexplained if it just
+    // appears. Explain it once, then remember (see uiSettingsStore).
+    if (!hasSeenAccessNotice) {
+      setPendingNotice(true);
+      return;
+    }
+    await actuallyCreate();
+  };
+
+  const confirmNotice = async () => {
+    markAccessNoticeSeen();
+    setPendingNotice(false);
+    await actuallyCreate();
   };
 
   // Panel/Separator must be direct children of Group — build a flat array
@@ -74,14 +98,20 @@ export function TerminalGrid({ workspaceId, workspaceName, cwd }: Props) {
             </option>
           ))}
         </select>
-        <button onClick={() => void handleAdd()} disabled={creating}>
+        <button ref={addButtonRef} onClick={() => void handleAdd()} disabled={creating}>
           {creating ? "opening…" : "+ pane"}
         </button>
         {error && <span className="terminal-grid-error">{error}</span>}
       </div>
+      {pendingNotice && (
+        <TerminalAccessNotice
+          onCancel={() => setPendingNotice(false)}
+          onConfirm={() => void confirmNotice()}
+        />
+      )}
       {panes.length === 0 ? (
         <div className="panel-empty">
-          <span className="panel-empty-icon">▢</span>
+          <span className="panel-empty-icon" aria-hidden="true">▢</span>
           no terminal panes yet
           <span className="panel-empty-hint">pick a kind above and hit “+ pane”</span>
         </div>
@@ -90,6 +120,53 @@ export function TerminalGrid({ workspaceId, workspaceName, cwd }: Props) {
           {groupChildren}
         </Group>
       )}
+    </div>
+  );
+}
+
+// Shown exactly once, ever (see uiSettingsStore's hasSeenTerminalAccessNotice),
+// right before the very first terminal pane is opened: on macOS, the PTY
+// backing that pane reads/writes files under the workspace's folder the
+// moment it starts, which is exactly when macOS's own "<App> would like to
+// access files in <folder>" system dialog appears — unexplained, that looks
+// like an unrelated interruption. This just names it ahead of time.
+function TerminalAccessNotice({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(onCancel);
+  return (
+    <div className="add-agent-overlay">
+      <div
+        ref={dialogRef}
+        className="add-agent-modal pixel-frame terminal-access-notice"
+        role="dialog"
+        aria-modal="true"
+        aria-label="macOS file access notice"
+        tabIndex={-1}
+      >
+        <div className="add-agent-header">
+          <span>heads up: a macOS permission dialog is coming</span>
+        </div>
+        <p>
+          Opening a terminal pane starts a real shell in this workspace's folder. macOS is about
+          to show its own system dialog asking whether this app can access files there — that's
+          normal, it's macOS (not this app) protecting your files, and it only asks once per
+          folder.
+        </p>
+        <p>Click <strong>Allow</strong> on that system dialog so the terminal can read/write the workspace.</p>
+        <div className="add-agent-actions">
+          <button onClick={onCancel} className="git-bar-btn-ghost git-bar-btn">
+            cancel
+          </button>
+          <button className="add-agent-submit" onClick={onConfirm}>
+            got it, continue
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
