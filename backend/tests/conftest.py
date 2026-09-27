@@ -21,6 +21,7 @@ from app.core import (
     chat_bridge,
     conversation_store,
     git_ops,
+    memory_store,
     settings_store,
     task_board,
     workspace_registry,
@@ -56,6 +57,12 @@ def isolate_real_user_state(tmp_path, monkeypatch):
 
     monkeypatch.setattr(agent_registry, "STATE_FILE", home / "studio-ops" / "state" / "agents.json")
     monkeypatch.setattr(agent_registry, "AGENT_WORKSPACES_ROOT", home / "studio-ops" / "agent-workspaces")
+
+    # memory_store's agent scope IS agent_registry's own workspace dir
+    # (facts live directly in agent-workspaces/{id}/, not a subfolder) —
+    # same root, kept in sync with the line above rather than duplicated.
+    monkeypatch.setattr(memory_store, "AGENT_WORKSPACES_ROOT", agent_registry.AGENT_WORKSPACES_ROOT)
+    monkeypatch.setattr(memory_store, "OFFICE_MEMORY_ROOT", home / "studio-ops" / "state" / "office-memory")
 
     monkeypatch.setattr(attachments, "ATTACH_ROOT", home / "studio-ops" / "chat-uploads")
 

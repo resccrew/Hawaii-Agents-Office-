@@ -53,6 +53,24 @@ def _auth_headers() -> dict[str, str]:
 mcp = FastMCP("studio-ops")
 
 
+class InvalidMemoryScope(ValueError):
+    """Raised before any request reaches the backend when a caller passes a
+    scope other than its own agent id (implicit, via None) or "office"."""
+
+
+def _resolve_scope(scope: str | None) -> str:
+    """studio_memory_* tools only ever let a caller read/write its OWN
+    agent memory (scope omitted) or the shared "office" memory — never
+    another agent's private scope. Enforced here, before any HTTP request
+    is made, so a misbehaving agent can't even probe another agent's
+    memory over the network."""
+    if scope is None:
+        return CALLER_AGENT_ID
+    if scope == "office":
+        return scope
+    raise InvalidMemoryScope('scope must be omitted (your own agent memory) or "office" — got ' f"{scope!r}")
+
+
 @mcp.tool()
 async def studio_list_agents(department_id: str | None = None) -> list[dict]:
     """List agents currently registered in Studio Ops, optionally filtered
@@ -184,6 +202,64 @@ async def studio_update_task(
         payload["result"] = result
     async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.patch(f"/api/v1/tasks/{task_id}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+
+@mcp.tool()
+async def studio_memory_list(scope: str | None = None) -> list[dict]:
+    """List the memory index for a scope — read this FIRST, before doing
+    anything else, so you don't repeat work or re-learn something already
+    known. scope is "office" for the shared, project-wide memory (read by
+    every agent) or omitted to use your own agent memory (your private,
+    persistent notes across every turn you've ever had). No other scope
+    value is allowed — you cannot list another agent's private memory.
+    Returns {slug, name, description} per fact — use studio_memory_read
+    for the full body of any that look relevant."""
+    target = _resolve_scope(scope)
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
+        resp = await client.get(f"/api/v1/memory/{target}")
+        resp.raise_for_status()
+        return resp.json()
+
+
+@mcp.tool()
+async def studio_memory_read(slug: str, scope: str | None = None) -> dict:
+    """Read one memory fact's full body by slug (from studio_memory_list).
+    scope defaults to your own agent memory, same as studio_memory_list —
+    only "office" or omitted (your own memory) are allowed."""
+    target = _resolve_scope(scope)
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
+        resp = await client.get(f"/api/v1/memory/{target}/{slug}")
+        resp.raise_for_status()
+        return resp.json()
+
+
+@mcp.tool()
+async def studio_memory_write(
+    slug: str, name: str, description: str, body: str, type: str = "project", scope: str | None = None
+) -> dict:
+    """Write (create or overwrite) a memory fact. Use this at the END of a
+    task to record what you learned or decided, so future turns (yours or
+    a teammate's) don't have to rediscover it — the same "auto memory"
+    discipline you'd apply for yourself: only write what's non-obvious,
+    would surprise a future reader, or took real effort to find out.
+
+    slug: short kebab-case id, becomes the filename (e.g. "api-rate-limit").
+    type: one of user (who the human/team is, preferences) | feedback
+    (corrections or confirmations about how to work) | project (facts/
+    decisions about the current work) | reference (pointers to where more
+    detail lives). scope: "office" to share with every agent (project-wide
+    facts, decisions, conventions), omitted for your own private agent
+    memory (progress notes, things specific to your own task). No other
+    scope value is allowed — you cannot write into another agent's
+    private memory."""
+    target = _resolve_scope(scope)
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
+        resp = await client.put(
+            f"/api/v1/memory/{target}/{slug}",
+            json={"name": name, "description": description, "type": type, "body": body},
+        )
         resp.raise_for_status()
         return resp.json()
 

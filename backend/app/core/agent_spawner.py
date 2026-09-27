@@ -10,6 +10,7 @@ factored out here to avoid three divergent copies.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 from app.core.agent_registry import AgentSession, get_agent_registry
 from app.core.connection_manager import get_manager
@@ -17,6 +18,62 @@ from app.core.event_processor import get_processor
 from app.models.events import EventType, SessionEvent, SessionEventData
 from app.services.providers import get_conversational_provider
 from app.services.providers.base import ProviderError
+
+# Written into every claude-provider agent's workspace before its first
+# turn — Claude Code reads CLAUDE.md from its cwd automatically, so this is
+# the one place the memory discipline needs to be stated for it to apply
+# to every future turn (not just the initial_prompt, which the agent won't
+# see again once it scrolls out of context). Other providers (openai/
+# gemini/ollama) don't have an equivalent cwd-file convention, so this is
+# claude-only — see the provider gate in spawn_agent() below.
+MEMORY_BLOCK_BEGIN = "<!-- studio-ops:memory:begin -->"
+MEMORY_BLOCK_END = "<!-- studio-ops:memory:end -->"
+
+MEMORY_INSTRUCTIONS = f"""{MEMORY_BLOCK_BEGIN}
+# Memory
+
+You have a persistent memory at `studio_memory_*` MCP tools (studio_memory_list,
+studio_memory_read, studio_memory_write) — two scopes: your OWN agent memory
+(the default, omit `scope`) and the shared office memory (`scope="office"`,
+readable/writable by every agent, for project-wide facts and decisions).
+
+- At the START of any task: call `studio_memory_list()` (your own memory)
+  and `studio_memory_list(scope="office")` (shared) to see what's already
+  known before you start. Read anything that looks relevant with
+  `studio_memory_read`.
+- At the END of a task: call `studio_memory_write` to record what you
+  learned or decided — only what's non-obvious, would surprise a future
+  reader, or took real effort to find out. Use `scope="office"` for
+  anything a teammate should also know; leave scope unset for your own
+  private progress notes.
+{MEMORY_BLOCK_END}"""
+
+
+def _write_memory_instructions(workspace_dir: str) -> None:
+    """Idempotently ensure the memory-discipline block is present in the
+    agent workspace's CLAUDE.md, WITHOUT clobbering any pre-existing user
+    content in that file (e.g. a workspace seeded from a real project
+    checkout that already has its own CLAUDE.md). The block is delimited
+    by MEMORY_BLOCK_BEGIN/END markers:
+    - file missing entirely -> create it with just the block.
+    - file exists, block present -> replace only the block in place.
+    - file exists, block absent -> append the block at the end.
+    """
+    path = Path(workspace_dir, "CLAUDE.md")
+    if not path.is_file():
+        path.write_text(MEMORY_INSTRUCTIONS + "\n", encoding="utf-8")
+        return
+
+    existing = path.read_text(encoding="utf-8")
+    start = existing.find(MEMORY_BLOCK_BEGIN)
+    end = existing.find(MEMORY_BLOCK_END)
+    if start != -1 and end != -1:
+        end += len(MEMORY_BLOCK_END)
+        new_content = existing[:start] + MEMORY_INSTRUCTIONS + existing[end:]
+    else:
+        sep = "" if existing.endswith("\n") else "\n"
+        new_content = existing + sep + "\n" + MEMORY_INSTRUCTIONS + "\n"
+    path.write_text(new_content, encoding="utf-8")
 
 
 async def _emit_session_start(agent: AgentSession) -> None:
@@ -90,6 +147,8 @@ async def spawn_agent(
         name=name,
         sprite=sprite,
     )
+    if provider == "claude" and agent.workspace_dir:
+        _write_memory_instructions(agent.workspace_dir)
 
     try:
         # bypassPermissions is safe here specifically because this agent runs
