@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import agents, chat, events, generate, git, settings, tasks, terminal, websockets, workspaces
+from app.api.routes import agents, chat, events, generate, git, memory, settings, tasks, terminal, websockets, workspaces
 from app.core.agent_spawner import rehydrate_office
 from app.core.autopilot import get_autopilot
 from app.core.ceo import ensure_ceo
@@ -83,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(generate.router, prefix="/api/v1")
     app.include_router(settings.router, prefix="/api/v1")
     app.include_router(git.router, prefix="/api/v1")
+    app.include_router(memory.router, prefix="/api/v1")
     app.include_router(tasks.rest_router, prefix="/api/v1")
     app.include_router(workspaces.router, prefix="/api/v1")
     app.include_router(terminal.rest_router, prefix="/api/v1")
