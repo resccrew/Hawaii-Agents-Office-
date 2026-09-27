@@ -6,6 +6,8 @@ execution order."""
 
 from __future__ import annotations
 
+import logging
+import stat
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -121,6 +123,58 @@ def test_workspace_create_rejects_path_outside_home(tmp_path, monkeypatch) -> No
         # The rejected path must not have been registered in memory either —
         # this is the ordering bug fixed alongside the allowlist check.
         assert registry.list() == before
+
+
+def test_token_file_and_dir_get_final_permissions_atomically() -> None:
+    # conftest.py's isolate_real_user_state fixture points auth.TOKEN_DIR/
+    # TOKEN_FILE at a fresh tmp path per test and clears _token_cache, so
+    # this call is always the "first ever" one for this test — exactly the
+    # creation path the TOCTOU fix touches. The dir/file must already carry
+    # their final restrictive mode the instant they're visible to stat(),
+    # not start permissive and get chmod'ed a moment later.
+    token = auth.get_token()
+    assert token
+    assert stat.S_IMODE(auth.TOKEN_DIR.stat().st_mode) == 0o700
+    assert stat.S_IMODE(auth.TOKEN_FILE.stat().st_mode) == 0o600
+
+
+def test_ws_access_log_masks_token() -> None:
+    # TestClient calls the ASGI app directly — no real uvicorn server is
+    # involved, so its access logger never actually fires here. This
+    # exercises the filter itself against a record shaped the way uvicorn's
+    # AccessFormatter builds one, which is the part the fix actually changes.
+    real_token = auth.get_token()
+    record = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1:12345", "GET", f"/ws/terminal/abc?token={real_token}", "1.1", 101),
+        exc_info=None,
+    )
+    keep = auth._MaskWsTokenFilter().filter(record)
+    assert keep is True
+    rendered = record.getMessage()
+    assert real_token not in rendered
+    assert "token=***" in rendered
+
+
+def test_rest_access_log_untouched_by_ws_filter() -> None:
+    # The filter must only touch /ws/* log lines — REST access logs (which
+    # never carry the token in the URL) should pass through unchanged.
+    record = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1:12345", "GET", "/api/v1/agents", "1.1", 200),
+        exc_info=None,
+    )
+    original_args = record.args
+    assert auth._MaskWsTokenFilter().filter(record) is True
+    assert record.args == original_args
 
 
 def test_terminal_create_rejects_cwd_outside_home() -> None:
