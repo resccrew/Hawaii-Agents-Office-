@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { getHttpBase, fetchWithRetry } from "@/systems/backendUrl";
+import { authedFetch } from "@/systems/apiAuth";
 
 export interface GitRepo {
   path: string;
@@ -94,7 +95,7 @@ export const useGitStore = create<GitStore>()((set, get) => ({
   addRepo: async (path) => {
     set({ error: null });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/git/repos`, {
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/git/repos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path }),
@@ -112,7 +113,7 @@ export const useGitStore = create<GitStore>()((set, get) => ({
   },
 
   setActive: async (path) => {
-    const resp = await fetch(`${getHttpBase()}/api/v1/git/active`, {
+    const resp = await authedFetch(`${getHttpBase()}/api/v1/git/active`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ path }),
@@ -121,7 +122,7 @@ export const useGitStore = create<GitStore>()((set, get) => ({
   },
 
   removeRepo: async (path) => {
-    const resp = await fetch(`${getHttpBase()}/api/v1/git/repos?path=${encodeURIComponent(path)}`, {
+    const resp = await authedFetch(`${getHttpBase()}/api/v1/git/repos?path=${encodeURIComponent(path)}`, {
       method: "DELETE",
     });
     if (resp.ok) applyState(set, await resp.json());
@@ -130,7 +131,7 @@ export const useGitStore = create<GitStore>()((set, get) => ({
   push: async (message) => {
     set({ pushing: true, lastPush: null, error: null });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/git/push`, {
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/git/push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: message || undefined }),
@@ -165,7 +166,7 @@ export const useGitStore = create<GitStore>()((set, get) => ({
   connectGithub: async (token) => {
     set({ connecting: true, error: null });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/git/github/connect`, {
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/git/github/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
@@ -189,7 +190,7 @@ export const useGitStore = create<GitStore>()((set, get) => ({
   selectGithub: async (repo) => {
     set({ selecting: repo.fullName, error: null });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/git/github/select`, {
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/git/github/select`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ full_name: repo.fullName, clone_url: repo.cloneUrl }),

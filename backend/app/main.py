@@ -5,10 +5,11 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import agents, chat, events, generate, git, settings, tasks, terminal, websockets, workspaces
+from app.core import auth
 from app.core.agent_spawner import rehydrate_office
 from app.core.autopilot import get_autopilot
 from app.core.ceo import ensure_ceo
@@ -21,6 +22,7 @@ from app.core.terminal_registry import get_terminal_registry
 STUDIO_TOML = Path(__file__).resolve().parent.parent / "studio.toml"
 
 logging.basicConfig(level=logging.INFO)
+auth.install_ws_log_token_mask()
 
 
 @asynccontextmanager
@@ -77,15 +79,21 @@ def create_app() -> FastAPI:
     # so it's live before the first request can create a task.
     get_autopilot(manager, processor)
 
-    app.include_router(events.router, prefix="/api/v1")
-    app.include_router(chat.rest_router, prefix="/api/v1")
-    app.include_router(agents.router, prefix="/api/v1")
-    app.include_router(generate.router, prefix="/api/v1")
-    app.include_router(settings.router, prefix="/api/v1")
-    app.include_router(git.router, prefix="/api/v1")
-    app.include_router(tasks.rest_router, prefix="/api/v1")
-    app.include_router(workspaces.router, prefix="/api/v1")
-    app.include_router(terminal.rest_router, prefix="/api/v1")
+    # Every route below requires a valid X-API-Key (REST) or ?token=
+    # (WebSocket, enforced per-handler via Depends(auth.enforce_ws_auth) —
+    # see auth.py's docstring for why /ws/terminal made this non-optional.
+    # /health alone stays open: no state, no side effects, just a liveness
+    # probe hooks/tooling can poll before a token even exists.
+    api_key_dep = [Depends(auth.require_api_key)]
+    app.include_router(events.router, prefix="/api/v1", dependencies=api_key_dep)
+    app.include_router(chat.rest_router, prefix="/api/v1", dependencies=api_key_dep)
+    app.include_router(agents.router, prefix="/api/v1", dependencies=api_key_dep)
+    app.include_router(generate.router, prefix="/api/v1", dependencies=api_key_dep)
+    app.include_router(settings.router, prefix="/api/v1", dependencies=api_key_dep)
+    app.include_router(git.router, prefix="/api/v1", dependencies=api_key_dep)
+    app.include_router(tasks.rest_router, prefix="/api/v1", dependencies=api_key_dep)
+    app.include_router(workspaces.router, prefix="/api/v1", dependencies=api_key_dep)
+    app.include_router(terminal.rest_router, prefix="/api/v1", dependencies=api_key_dep)
     app.include_router(websockets.router)
     app.include_router(chat.ws_router)
     app.include_router(tasks.ws_router)

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import { authedFetch, wsUrlWithToken } from "@/systems/apiAuth";
 import { getHttpBase, getWsBase } from "@/systems/backendUrl";
 import { connectWithRetry } from "@/systems/reconnectingWebSocket";
 
@@ -73,7 +74,7 @@ export function TerminalPane({ paneId }: Props) {
     // directions, so the browser's default `binaryType: "blob"` needs an
     // async hop through Blob.arrayBuffer() before xterm can write it.
     const socket = connectWithRetry(
-      `${getWsBase()}/ws/terminal/${paneId}`,
+      () => wsUrlWithToken(`${getWsBase()}/ws/terminal/${paneId}`),
       {
         onMessage: (event: MessageEvent) => {
           if (event.data instanceof Blob) {
@@ -115,7 +116,7 @@ export function TerminalPane({ paneId }: Props) {
 
           if (resizeTimeout) clearTimeout(resizeTimeout);
           resizeTimeout = setTimeout(() => {
-            void fetch(`${getHttpBase()}/api/v1/terminal/${paneId}/resize`, {
+            void authedFetch(`${getHttpBase()}/api/v1/terminal/${paneId}/resize`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ rows, cols }),

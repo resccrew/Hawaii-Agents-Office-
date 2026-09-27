@@ -9,9 +9,10 @@ import asyncio
 import base64
 import binascii
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from app.core import auth
 from app.core.attachments import AttachmentIn, SavedAttachment, save_attachment
 from app.core.chat_bridge import get_chat_bridge
 from app.core.connection_manager import get_manager
@@ -87,7 +88,7 @@ async def send_chat_message(session_id: str, payload: SendChatMessage) -> dict:
 
 
 @ws_router.websocket("/ws/chat/{session_id}")
-async def ws_chat(websocket: WebSocket, session_id: str) -> None:
+async def ws_chat(websocket: WebSocket, session_id: str, _auth: None = Depends(auth.enforce_ws_auth)) -> None:
     manager = get_manager()
     await manager.connect_chat(session_id, websocket)
     try:

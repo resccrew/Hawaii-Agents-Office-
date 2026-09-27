@@ -6,15 +6,31 @@ connection_manager.py for why it needed a new binary WS channel."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from app.core import auth
 from app.core.connection_manager import get_manager
 from app.core.terminal_registry import get_terminal_registry
 from app.models.terminal import TerminalKind, TerminalPane
 
 rest_router = APIRouter()
 ws_router = APIRouter()
+
+
+def _validate_cwd(cwd: str) -> str:
+    """A pane's cwd is attacker-reachable (POST body) and becomes the real
+    `os.chdir()` target of a forked PTY child — confine it to somewhere
+    under the human's own home directory rather than trusting it outright."""
+    resolved = Path(cwd).expanduser().resolve()
+    home = Path.home().resolve()
+    if resolved != home and home not in resolved.parents:
+        raise HTTPException(status_code=400, detail=f"cwd must be inside the home directory: {cwd!r}")
+    if not resolved.is_dir():
+        raise HTTPException(status_code=400, detail=f"cwd does not exist: {cwd!r}")
+    return str(resolved)
 
 
 class CreatePaneRequest(BaseModel):
@@ -30,9 +46,10 @@ class ResizeRequest(BaseModel):
 
 @rest_router.post("/terminal", response_model=TerminalPane)
 async def create_pane(payload: CreatePaneRequest) -> TerminalPane:
+    cwd = _validate_cwd(payload.cwd)
     registry = get_terminal_registry()
     try:
-        return await registry.create(workspace_id=payload.workspace_id, kind=payload.kind, cwd=payload.cwd)
+        return await registry.create(workspace_id=payload.workspace_id, kind=payload.kind, cwd=cwd)
     except OSError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -57,7 +74,9 @@ async def resize_pane(pane_id: str, payload: ResizeRequest) -> dict:
 
 
 @ws_router.websocket("/ws/terminal/{pane_id}")
-async def ws_terminal(websocket: WebSocket, pane_id: str) -> None:
+async def ws_terminal(
+    websocket: WebSocket, pane_id: str, _auth: None = Depends(auth.enforce_ws_auth)
+) -> None:
     registry = get_terminal_registry()
     if registry.get_live(pane_id) is None:
         # Reject before accept()ing — same "unknown id, don't pretend to
