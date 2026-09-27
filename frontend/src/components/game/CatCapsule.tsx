@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 import { useTick } from "@pixi/react";
-import type { Position } from "@/lib/types";
+import type { BubbleContent, Position } from "@/lib/types";
 import { useSpriteTexture } from "@/systems/useSpriteTexture";
 import type { CatPlan } from "@/systems/catMovement";
 import { LabelTag } from "./LabelTag";
+import { SpeechBubble } from "./SpeechBubble";
 
 // Five hand-picked designs (not a walk-cycle of one cat — five distinct
 // cats), assigned per-subagent for visual variety the same way DevRole
@@ -28,13 +29,15 @@ interface Props {
   catIndex: number;
   plan: CatPlan;
   showLabel?: boolean;
+  bubble?: BubbleContent | null;
+  bubbleStackOffset?: number;
 }
 
 // One Task-tool subagent, rendered as a cat that stays near its owner Lead
 // (see catMovement.ts) — curls up while the owner is idle, paces a small
 // loop nearby while it's working. Purely decorative/no interaction: unlike
 // Leads, subagents have no addressable chat session of their own.
-export function CatCapsule({ catIndex, plan, showLabel = false }: Props) {
+export function CatCapsule({ catIndex, plan, showLabel = false, bubble, bubbleStackOffset = 0 }: Props) {
   const spritePath = CAT_SPRITES[((catIndex % CAT_SPRITES.length) + CAT_SPRITES.length) % CAT_SPRITES.length];
   const texture = useSpriteTexture(spritePath);
 
@@ -81,6 +84,7 @@ export function CatCapsule({ catIndex, plan, showLabel = false }: Props) {
           <LabelTag text={plan.label} fontSize={10} color="#e9b7d4" />
         </pixiContainer>
       )}
+      <SpeechBubble bubble={bubble} baseY={-TARGET_HEIGHT - 10} stackOffset={bubbleStackOffset} />
     </pixiContainer>
   );
 }

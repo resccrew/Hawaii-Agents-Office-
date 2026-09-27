@@ -3,12 +3,13 @@
 import { useCallback, useRef, useState } from "react";
 import { useTick } from "@pixi/react";
 import type { Graphics } from "pixi.js";
-import type { DevRole, Position } from "@/lib/types";
+import type { BubbleContent, DevRole, Position } from "@/lib/types";
 import { useSpriteTexture } from "@/systems/useSpriteTexture";
 import { SPRITE_PATH_BY_ROLE } from "@/systems/spriteRoles";
 import type { OfficePlan } from "@/systems/officeMovement";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { LabelTag } from "./LabelTag";
+import { SpeechBubble } from "./SpeechBubble";
 
 const WIDTH = 64;
 const HEIGHT = 100;
@@ -25,6 +26,8 @@ interface Props {
    *  sprite independently of the functional role. Falls back to role → sprite
    *  mapping when null/undefined. */
   sprite?: string | null;
+  bubble?: BubbleContent | null;
+  bubbleStackOffset?: number;
 }
 
 // The office character for one spawned agent. Walks along plan.path — busy:
@@ -32,7 +35,16 @@ interface Props {
 // ("working"); idle: wherever they are → a lounge seat. Makes who's-busy
 // obvious at a glance: seated at a desk = working, hanging out by the bar/
 // hammock = free.
-export function LeadCapsule({ plan, role, name, chatAvailable, onClick, sprite }: Props) {
+export function LeadCapsule({
+  plan,
+  role,
+  name,
+  chatAvailable,
+  onClick,
+  sprite,
+  bubble,
+  bubbleStackOffset = 0,
+}: Props) {
   // Sprite resolution order: explicit skin override → role default → producer fallback
   const spritePath =
     (sprite && SPRITE_PATH_BY_ROLE[sprite]) ||
@@ -135,6 +147,7 @@ export function LeadCapsule({ plan, role, name, chatAvailable, onClick, sprite }
       <pixiContainer y={18}>
         <LabelTag text={statusLabel} fontSize={16} color="#a7f3d0" />
       </pixiContainer>
+      <SpeechBubble bubble={bubble} baseY={-HEIGHT - 44} stackOffset={bubbleStackOffset} />
     </pixiContainer>
   );
 }
