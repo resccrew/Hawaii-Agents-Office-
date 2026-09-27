@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # macos-latest, not a Linux/Windows matrix: the desktop app (src-tauri/)
+    # is macOS-only today (see tauri.conf.json's bundle.macOS config and the
+    # README), and matching the actual dev machine keeps this one job
+    # instead of teaching a Linux runner Tauri's webkit2gtk system deps for
+    # a target nothing ships to yet.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Backend — install
+        working-directory: backend
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
+
+      - name: Backend — pytest
+        working-directory: backend
+        # STUDIO_OPS_LIVE_TESTS deliberately unset: the two live-CLI
+        # chat_bridge tests need a real `claude` login and a live server,
+        # neither of which exist on a CI runner — they skip by default.
+        run: .venv/bin/python -m pytest -q
+
+      - name: Frontend — install
+        working-directory: frontend
+        run: npm install
+
+      - name: Frontend — typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Rust — cargo check (src-tauri)
+        working-directory: src-tauri
+        run: cargo check
