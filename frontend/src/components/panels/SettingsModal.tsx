@@ -9,6 +9,7 @@ import {
   type ModelCatalog,
 } from "@/systems/api";
 import { useUiSettingsStore, DEFAULT_UI_SETTINGS } from "@/stores/uiSettingsStore";
+import { applyDesktopHotkey } from "@/systems/desktopBridge";
 import { useFocusTrap } from "@/systems/useFocusTrap";
 
 interface Props {
@@ -151,7 +152,24 @@ export function SettingsModal({ onClose }: Props) {
   const setDefaultDepartment = useUiSettingsStore((s) => s.setDefaultDepartment);
   const reduceMotion = useUiSettingsStore((s) => s.reduceMotion);
   const setReduceMotion = useUiSettingsStore((s) => s.setReduceMotion);
+  const desktopNotificationsEnabled = useUiSettingsStore((s) => s.desktopNotificationsEnabled);
+  const setDesktopNotificationsEnabled = useUiSettingsStore((s) => s.setDesktopNotificationsEnabled);
+  const desktopHotkey = useUiSettingsStore((s) => s.desktopHotkey);
+  const setDesktopHotkey = useUiSettingsStore((s) => s.setDesktopHotkey);
+  const [hotkeyDraft, setHotkeyDraft] = useState(desktopHotkey);
+  const [hotkeyError, setHotkeyError] = useState<string | null>(null);
   const [backendUrlDraft, setBackendUrlDraft] = useState(backendHttpUrl);
+
+  const handleHotkeySave = async () => {
+    const trimmed = hotkeyDraft.trim() || DEFAULT_UI_SETTINGS.desktopHotkey;
+    const err = await applyDesktopHotkey(trimmed, desktopHotkey);
+    if (err) {
+      setHotkeyError(err);
+      return;
+    }
+    setHotkeyError(null);
+    setDesktopHotkey(trimmed);
+  };
 
   const [fields, setFields] = useState<SettingField[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -264,9 +282,30 @@ export function SettingsModal({ onClose }: Props) {
                 <option value="terminal">Terminal (Tokyo Night)</option>
               </select>
             </label>
+            <label className="settings-checkbox-field">
+              <input
+                type="checkbox"
+                checked={desktopNotificationsEnabled}
+                onChange={(e) => setDesktopNotificationsEnabled(e.target.checked)}
+              />
+              <span>desktop notifications (permission requests, finished tasks, errors)</span>
+            </label>
+            <label className="settings-field">
+              <span className="settings-field-label">global hotkey (show most-overdue waiting agent)</span>
+              <input
+                type="text"
+                value={hotkeyDraft}
+                onChange={(e) => setHotkeyDraft(e.target.value)}
+                onBlur={handleHotkeySave}
+                placeholder={DEFAULT_UI_SETTINGS.desktopHotkey}
+              />
+            </label>
+            {hotkeyError && <div className="add-agent-error">{hotkeyError}</div>}
             <div className="settings-hint">
               Changing the backend URL reconnects every socket the next time a panel opens — reload
-              the page if something still looks stale.
+              the page if something still looks stale. Desktop notifications, the dock badge, tray
+              icon, and hotkey only do anything inside the packaged/dev desktop app, not a plain
+              browser tab.
             </div>
           </div>
         )}

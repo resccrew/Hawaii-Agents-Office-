@@ -23,7 +23,13 @@ let inflight: Promise<string> | null = null;
 
 declare global {
   interface Window {
-    __TAURI__?: { core?: { invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T> } };
+    __TAURI__?: {
+      core?: { invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T> };
+      // Only used by systems/desktopBridge.ts (tray/hotkey event listeners),
+      // declared here alongside `core` since TS requires every `declare
+      // global` augmentation of the same interface to agree on its shape.
+      event?: { listen: <T>(event: string, handler: (e: { payload: T }) => void) => Promise<() => void> };
+    };
   }
 }
 
