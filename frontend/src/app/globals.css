@@ -106,7 +106,10 @@
   /* ---- text ---- */
   --text-1: #c0caf5;
   --text-2: #a9b1d6;
-  --text-3: #565f89;
+  /* WCAG AA (>=4.5:1) against --bg-1 (#1a1b26) at ~4.63:1 — the original
+     #565f89 measured ~2.76:1, well under AA, for "muted/meta" text (session
+     ids, timestamps, department labels) that's often small (<14px). */
+  --text-3: #7b83ac;
   --text-inv: #16161e;
 
   /* ---- tokyo night colors (mapping to semantic variables) ---- */
@@ -1454,6 +1457,40 @@ body {
   border-color: var(--sunset-ring);
   box-shadow: 0 0 0 1px var(--sunset-ring), var(--glow-sunset);
 }
+.agent-card:focus-visible {
+  outline: 2px solid var(--ocean);
+  outline-offset: 2px;
+}
+
+/* Compact token/cost badge (TokenBadge.tsx) on an agent-card. */
+.token-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+/* Visually hidden but still announced by screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 .agent-card-top {
   display: flex;
@@ -1978,6 +2015,20 @@ body {
   filter: brightness(1.08);
   box-shadow: var(--glow-sunset);
 }
+.terminal-access-notice p {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+.add-agent-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.add-agent-actions .add-agent-submit {
+  flex: 0 0 auto;
+}
 .add-agent-submit:disabled {
   opacity: 0.55;
   cursor: wait;
@@ -2272,6 +2323,53 @@ body {
   }
 }
 
+/* Tuned to the desktop app's enforced minimum window size (1100x700, see
+   src-tauri/tauri.conf.json's minWidth/minHeight) — below 1400px the side
+   panels already shrink (above), but at exactly the 1100px floor the
+   toolbar's title + GitBar + action buttons + status chips no longer fit
+   on one row without this, and the fixed-width git bar controls used to
+   get clipped. Everything here keeps affordances reachable (wrap/scroll)
+   instead of visually overlapping. */
+@media (max-width: 1180px) {
+  :root {
+    --panel-w: 240px;
+    --panel-w-left: 220px;
+    /* The toolbar wraps to two rows below — everything anchored to
+       --toolbar-h (main-content, both side panels) must grow with it or
+       they overlap the wrapped GitBar row instead of sitting under it. */
+    --toolbar-h: 100px;
+  }
+  .toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--toolbar-h);
+    padding: 8px 12px;
+    row-gap: 6px;
+    align-content: flex-start;
+  }
+  .git-bar {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    flex: 1 1 100%;
+    order: 3;
+    border-left: none;
+    border-right: none;
+    padding: 6px 0 0;
+  }
+  .git-bar-select {
+    max-width: 160px;
+  }
+  .git-bar-msg {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 120px;
+  }
+  .toolbar-spacer {
+    flex-basis: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -2288,4 +2386,143 @@ body {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+}
+
+/* Memory panel (MemoryPanel.tsx) — reuses .add-agent-overlay/-modal/-header
+   and .settings-tabs .side-tab for the shell/tabs; these are the pieces
+   specific to its two-column list+editor layout. */
+.memory-modal {
+  width: 620px;
+}
+.memory-body {
+  display: flex;
+  gap: 16px;
+  min-height: 280px;
+  max-height: 60vh;
+}
+.memory-list {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.memory-new-button {
+  background: var(--bg-2);
+  border: 1px dashed var(--border-strong);
+  color: var(--text-2);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  text-align: left;
+}
+.memory-new-button:hover {
+  border-color: var(--ocean);
+  color: var(--text-1);
+}
+.memory-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 8px 2px;
+}
+.memory-list-item {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.memory-list-item:hover {
+  border-color: var(--ocean);
+}
+.memory-list-item-active {
+  border-color: var(--ocean);
+  background: var(--ocean-weak);
+}
+.memory-list-item-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.memory-list-item-desc {
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.memory-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.memory-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.memory-editor input,
+.memory-editor select,
+.memory-editor textarea {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 9px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  border-radius: var(--r-md);
+  resize: vertical;
+}
+.memory-editor input:focus,
+.memory-editor select:focus,
+.memory-editor textarea:focus {
+  outline: none;
+  border-color: var(--ocean);
+  box-shadow: 0 0 0 3px var(--ocean-weak);
+}
+.memory-fact-body {
+  font-family: inherit;
+  line-height: 1.5;
+}
+.memory-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.memory-editor-actions button {
+  background: var(--bg-3);
+  border: 1px solid var(--border-strong);
+  color: var(--text-1);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.memory-editor-actions button:hover {
+  border-color: var(--ocean);
+}
+.memory-editor-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.memory-delete-button {
+  color: var(--danger) !important;
+}
+.memory-delete-button:hover {
+  border-color: var(--danger) !important;
 }

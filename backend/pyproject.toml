@@ -8,7 +8,17 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "websockets>=13.0",
-    "mcp>=1.28.0",
+    # Pinned below 2.0: mcp 2.x renamed FastMCP to MCPServer and moved it
+    # (mcp.server.fastmcp -> mcp.server.mcpserver), which app/mcp/
+    # studio_ops_mcp.py isn't written against. Found while adding the
+    # memory MCP tools — `from mcp.server.fastmcp import FastMCP` fails
+    # outright with mcp 2.2.0, which `mcp>=1.28.0` alone happily resolves
+    # to on a fresh `uv pip install`. This is pre-existing breakage, not
+    # introduced by this change: every studio_* MCP tool (list_agents,
+    # send_message, the task board, ...) is affected identically, not just
+    # the new memory ones — worth a real migration to the 2.x API at some
+    # point, not just re-pinning, but that's out of scope here.
+    "mcp>=1.28.0,<2",
     # Runtime HTTP client for the studio-ops MCP server (studio_ops_mcp.py)
     # and the OpenAI/Gemini/Ollama conversational providers — previously
     # only listed under dev (worked by accident: dev deps happened to be

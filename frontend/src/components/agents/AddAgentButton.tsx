@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useEmojiBurst } from "@/systems/useEmojiBurst";
 import { getHttpBase } from "@/systems/backendUrl";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { useFocusTrap } from "@/systems/useFocusTrap";
 import { authedFetch } from "@/systems/apiAuth";
 
 const ROLES = [
@@ -137,13 +138,21 @@ export function AddAgentButton({ onSpawned, apiBase = getHttpBase() }: Props) {
   }
 
   const providerHint = PROVIDERS.find((p) => p.value === provider)?.hint;
+  const dialogRef = useFocusTrap<HTMLDivElement>(() => setOpen(false));
 
   return (
     <div className="add-agent-overlay">
-    <div className="add-agent-modal pixel-frame">
+    <div
+      ref={dialogRef}
+      className="add-agent-modal pixel-frame"
+      role="dialog"
+      aria-modal="true"
+      aria-label="spawn new agent"
+      tabIndex={-1}
+    >
       <div className="add-agent-header">
         <span>spawn new agent</span>
-        <button onClick={() => setOpen(false)}>x</button>
+        <button onClick={() => setOpen(false)} aria-label="close">x</button>
       </div>
       <label>
         brain

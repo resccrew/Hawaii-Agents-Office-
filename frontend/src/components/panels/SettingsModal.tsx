@@ -10,6 +10,7 @@ import {
 } from "@/systems/api";
 import { useUiSettingsStore, DEFAULT_UI_SETTINGS } from "@/stores/uiSettingsStore";
 import { applyDesktopHotkey } from "@/systems/desktopBridge";
+import { useFocusTrap } from "@/systems/useFocusTrap";
 
 interface Props {
   onClose: () => void;
@@ -211,13 +212,21 @@ export function SettingsModal({ onClose }: Props) {
   };
 
   const groups = Array.from(new Set(fields.map((f) => groupOf(f.key))));
+  const dialogRef = useFocusTrap<HTMLDivElement>(onClose);
 
   return (
     <div className="add-agent-overlay">
-      <div className="settings-modal pixel-frame">
+      <div
+        ref={dialogRef}
+        className="settings-modal pixel-frame"
+        role="dialog"
+        aria-modal="true"
+        aria-label="settings"
+        tabIndex={-1}
+      >
         <div className="add-agent-header">
           <span>settings</span>
-          <button onClick={onClose}>x</button>
+          <button onClick={onClose} aria-label="close">x</button>
         </div>
 
         <div className="side-panel-tabs settings-tabs">

@@ -83,6 +83,10 @@ async def list_agents(department_id: str | None = None) -> list[dict]:
             "status": a.status,
             "sessionId": a.claude_session_id,
             "lastError": a.last_error,
+            "inputTokens": a.input_tokens,
+            "outputTokens": a.output_tokens,
+            "cacheReadTokens": a.cache_read_tokens,
+            "cacheCreationTokens": a.cache_creation_tokens,
         }
         for a in registry.list(department_id=department_id)
     ]

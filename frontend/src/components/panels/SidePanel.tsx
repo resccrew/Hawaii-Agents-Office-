@@ -5,6 +5,7 @@ import { useAgentsStore, selectAgents, startAgentsPolling } from "@/stores/agent
 import { useChatStore, selectOpenSessions } from "@/stores/chatStore";
 import { RoomGame } from "@/components/game/RoomGame";
 import { useFitSize } from "@/systems/useFitSize";
+import { TokenBadge } from "@/components/panels/TokenBadge";
 
 interface Props {
   departmentId: string | null;
@@ -45,23 +46,34 @@ export function SidePanel({ departmentId, onSelectAgent }: Props) {
         <div className="team-list">
           {agents.length === 0 && (
             <div className="panel-empty">
-              <span className="panel-empty-icon">◉</span>
+              <span className="panel-empty-icon" aria-hidden="true">◉</span>
               office is empty
               <span className="panel-empty-hint">hit “+ agent” to spawn your first teammate</span>
             </div>
           )}
           {agents.map((agent) => {
             const isActiveChat = agent.sessionId !== null && openChats.includes(agent.sessionId);
+            const openThisAgent = () => agent.sessionId && onSelectAgent(agent.sessionId);
             return (
               <div
                 key={agent.agentId}
                 className={`agent-card${isActiveChat ? " agent-card-selected" : ""}${agent.sessionId ? " agent-card-clickable" : ""}`}
-                onClick={() => agent.sessionId && onSelectAgent(agent.sessionId)}
+                onClick={openThisAgent}
+                role="button"
+                tabIndex={0}
+                aria-label={`open chat with ${agent.name}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openThisAgent();
+                  }
+                }}
               >
                 <div className="agent-card-top">
                   <span className={`status-dot status-dot-${agent.status}`} />
                   <span className="agent-card-name">{agent.name}</span>
                   <span className="agent-card-role">{agent.role.replace("_", " ")}</span>
+                  <TokenBadge agentId={agent.agentId} />
                 </div>
                 <div className="agent-card-meta">
                   <span>{agent.departmentId}</span>
@@ -80,7 +92,7 @@ export function SidePanel({ departmentId, onSelectAgent }: Props) {
                       if (agent.sessionId) onSelectAgent(agent.sessionId);
                     }}
                   >
-                    💬 chat
+                    <span aria-hidden="true">💬</span> chat
                   </button>
                   <button
                     className="agent-card-stop"
@@ -90,7 +102,7 @@ export function SidePanel({ departmentId, onSelectAgent }: Props) {
                       void stopAgent(agent.agentId);
                     }}
                   >
-                    {stopping === agent.agentId ? "…" : "■ stop"}
+                    {stopping === agent.agentId ? "…" : <><span aria-hidden="true">■</span> stop</>}
                   </button>
                 </div>
               </div>

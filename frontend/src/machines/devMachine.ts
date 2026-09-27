@@ -3,10 +3,13 @@ import type { DevPhase } from "@/stores/slices/types";
 
 // Ported in spirit from claude-office's agentMachine.ts phase graph
 // (arriving -> walking -> working -> leaving), renamed to studio theme.
-// v1 (Phase 2 of the studio-ops plan) drives phase directly off the backend
-// DevState rather than a full XState machine with pathfinding-triggered
-// transitions — pathfinding/A* wiring is deferred until placeholder-Graphics
-// visualization is proven end-to-end, per the approved plan.
+// Plain function, not a state machine library: it maps the backend's
+// DevState directly onto a DevPhase for rendering. There is no `xstate`
+// dependency in this project (removed — it was listed in package.json but
+// never imported/called anywhere, see PR history) and no plan to add one;
+// if pathfinding-triggered transitions ever need real guards/side-effects
+// beyond this switch, reach for a plain reducer here before reaching for a
+// state-machine library.
 export function phaseForDevState(state: DevState): DevPhase {
   switch (state) {
     case "arriving":

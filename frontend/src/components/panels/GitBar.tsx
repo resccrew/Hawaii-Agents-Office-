@@ -73,7 +73,7 @@ export function GitBar() {
 
   return (
     <div className="git-bar">
-      <span className="git-bar-glyph" title="git">⎇</span>
+      <span className="git-bar-glyph" title="git" aria-hidden="true">⎇</span>
 
       {/* --- account --- */}
       {connected ? (

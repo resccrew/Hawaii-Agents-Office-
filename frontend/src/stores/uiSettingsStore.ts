@@ -18,6 +18,11 @@ export interface UiSettings {
   // this is running as a plain browser tab (no Tauri bridge).
   desktopNotificationsEnabled: boolean;
   desktopHotkey: string;
+  // Set once the "a macOS permission dialog is about to appear" notice
+  // (see TerminalGrid.tsx) has been shown once — persisted so it never
+  // nags again after the first terminal pane is opened, this session or
+  // any future one.
+  hasSeenTerminalAccessNotice: boolean;
 }
 
 interface UiSettingsStore extends UiSettings {
@@ -27,6 +32,7 @@ interface UiSettingsStore extends UiSettings {
   setTheme: (theme: "hawaii" | "terminal") => void;
   setDesktopNotificationsEnabled: (on: boolean) => void;
   setDesktopHotkey: (shortcut: string) => void;
+  markTerminalAccessNoticeSeen: () => void;
   reset: () => void;
 }
 
@@ -37,6 +43,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   theme: "hawaii",
   desktopNotificationsEnabled: true,
   desktopHotkey: "CmdOrCtrl+Shift+H",
+  hasSeenTerminalAccessNotice: false,
 };
 
 export const useUiSettingsStore = create<UiSettingsStore>()(
@@ -50,6 +57,7 @@ export const useUiSettingsStore = create<UiSettingsStore>()(
       setTheme: (theme) => set({ theme }),
       setDesktopNotificationsEnabled: (desktopNotificationsEnabled) => set({ desktopNotificationsEnabled }),
       setDesktopHotkey: (desktopHotkey) => set({ desktopHotkey: desktopHotkey.trim() || DEFAULT_UI_SETTINGS.desktopHotkey }),
+      markTerminalAccessNoticeSeen: () => set({ hasSeenTerminalAccessNotice: true }),
       reset: () => set(DEFAULT_UI_SETTINGS),
     }),
     { name: "studio-ops-ui-settings" },

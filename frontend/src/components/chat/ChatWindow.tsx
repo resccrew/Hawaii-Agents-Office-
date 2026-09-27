@@ -9,6 +9,7 @@ import { useRoomStore, selectRoomSessions } from "@/stores/roomStore";
 import { useAgentsStore, selectAgents } from "@/stores/agentsStore";
 import { connectChat, sendChatMessage, fileToAttachment } from "@/systems/chatWebSocketController";
 import type { FitSize } from "@/systems/useFitSize";
+import { MemoryPanel } from "@/components/memory/MemoryPanel";
 
 // Mirrors the backend's per-file cap (chat.py's MAX_ATTACHMENT_BYTES) —
 // checked client-side too so an oversized file gets a clear, instant
@@ -81,6 +82,7 @@ export function ChatWindow({ sessionId, anchor, frame, zIndex }: Props) {
   const [attachError, setAttachError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [geom, setGeom] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [memoryOpen, setMemoryOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const disconnectRef = useRef<() => void>(() => {});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -204,9 +206,17 @@ export function ChatWindow({ sessionId, anchor, frame, zIndex }: Props) {
           <span className={`status-dot chat-dot-${session.status}`} />
           {title}
         </span>
-        <span className="chat-panel-grip">⠿</span>
+        <span className="chat-panel-grip" aria-hidden="true">⠿</span>
+        {agent && (
+          <button onClick={() => setMemoryOpen(true)} aria-label="agent memory" title="memory">
+            <span aria-hidden="true">🧠</span>
+          </button>
+        )}
         <button onClick={() => closePanel(sessionId)} aria-label="close chat">✕</button>
       </div>
+      {memoryOpen && agent && (
+        <MemoryPanel agentScope={agent.agentId} agentLabel={title} onClose={() => setMemoryOpen(false)} />
+      )}
       <div className={`chat-panel-status chat-panel-status-${session.status}`}>
         {STATUS_HINT[session.status] ?? session.status}
       </div>
@@ -244,7 +254,7 @@ export function ChatWindow({ sessionId, anchor, frame, zIndex }: Props) {
         <div className="chat-panel-attachments">
           {pendingFiles.map((f, i) => (
             <span key={`${f.name}-${i}`} className="chat-attachment-chip">
-              📎 {f.name}
+              <span aria-hidden="true">📎</span> {f.name}
               <button onClick={() => removeFile(i)} aria-label={`remove ${f.name}`}>
                 ×
               </button>
@@ -287,7 +297,7 @@ export function ChatWindow({ sessionId, anchor, frame, zIndex }: Props) {
           aria-label="attach file"
           title="attach file"
         >
-          📎
+          <span aria-hidden="true">📎</span>
         </button>
         <input
           value={draft}

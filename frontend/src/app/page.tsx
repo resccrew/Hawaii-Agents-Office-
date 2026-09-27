@@ -117,7 +117,9 @@ export default function Home() {
           <span className={`status-dot status-dot-${online === null ? "starting" : online ? "active" : "error"}`} />
           {online === null ? "connecting…" : online ? "online" : "backend offline"}
         </span>
-        <span className="toolbar-chip">◉ {agents.length} agent{agents.length === 1 ? "" : "s"}</span>
+        <span className="toolbar-chip">
+          <span aria-hidden="true">◉</span> {agents.length} agent{agents.length === 1 ? "" : "s"}
+        </span>
       </div>
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       
