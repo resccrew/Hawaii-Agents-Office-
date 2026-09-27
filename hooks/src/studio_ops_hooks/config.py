@@ -71,6 +71,19 @@ CONFIG_FILE = Path.home() / ".claude" / "studio-ops-config.env"
 STRIP_PREFIXES: list[str] = []
 
 
+_TOKEN_FILE = Path.home() / ".studio-ops" / "api-token"
+
+
+def _read_token_file() -> str:
+    """The backend (app/core/auth.py) generates this file on first start —
+    reading it here means a fresh install's hooks Just Work without a human
+    having to hand-copy a key into studio-ops-config.env first."""
+    try:
+        return _TOKEN_FILE.read_text().strip()
+    except OSError:
+        return ""
+
+
 def load_config() -> dict[str, str]:
     config: dict[str, str] = {}
     if CONFIG_FILE.exists():
@@ -84,5 +97,11 @@ def load_config() -> dict[str, str]:
                         config[key.strip()] = value
         except Exception:
             pass
-    _set_api_key(os.environ.get("STUDIO_OPS_API_KEY", config.get("STUDIO_OPS_API_KEY", "")))
+    # Precedence: explicit env var > explicit config file entry > the shared
+    # token file the backend itself owns. An explicit override always wins
+    # (e.g. pointing hooks at a *different* backend instance's key), but the
+    # common case needs none of that.
+    _set_api_key(
+        os.environ.get("STUDIO_OPS_API_KEY", config.get("STUDIO_OPS_API_KEY", "")) or _read_token_file()
+    )
     return config

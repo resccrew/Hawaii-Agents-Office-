@@ -5,6 +5,7 @@ import { useEmojiBurst } from "@/systems/useEmojiBurst";
 import { getHttpBase } from "@/systems/backendUrl";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useFocusTrap } from "@/systems/useFocusTrap";
+import { authedFetch } from "@/systems/apiAuth";
 
 const ROLES = [
   { value: "programmer", label: "Programmer" },
@@ -85,7 +86,7 @@ export function AddAgentButton({ onSpawned, apiBase = getHttpBase() }: Props) {
     setStatus("spawning");
     setError(null);
     try {
-      const resp = await fetch(`${apiBase}/api/v1/agents`, {
+      const resp = await authedFetch(`${apiBase}/api/v1/agents`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

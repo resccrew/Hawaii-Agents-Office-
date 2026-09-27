@@ -14,14 +14,27 @@ fire-and-forget `asyncio.create_task` never completing, hanging the test on
 `ws.receive_json()` forever, even though the exact same call sequence
 against a real running `uvicorn` process completes in ~3s. Real subprocess
 spawning needs a real event loop; a live server (started separately, e.g.
-via `uvicorn app.main:app --port 8010`) sidesteps this entirely. Skips
-cleanly if no server is reachable there.
+via `uvicorn app.main:app --port 8010`) sidesteps this entirely.
+
+Gated behind STUDIO_OPS_LIVE_TESTS=1 (opt-in), not just "is claude on PATH
+and is :8010 reachable" — a plain pytest run used to probe :8010 and run
+these for real (against whatever unrelated backend happens to already be
+running there — common, since this is a personal daily-use app) whenever a
+studio-ops server happened to be up, which produced confusing,
+misattributed failures (a generic "claude CLI not found on PATH" from
+claude_cli_service.py's blanket FileNotFoundError handler — the exact same
+PATH resolves `claude` fine outside that call; more likely an empty/invalid
+`cwd` for a session with no working_dir, not a missing binary) instead of a
+clean skip. Opt in explicitly when you actually want to exercise the real
+CLI path:
+    STUDIO_OPS_LIVE_TESTS=1 pytest -k test_chat_sends_immediately_when_session_idle
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shutil
 from datetime import UTC, datetime
 
@@ -47,10 +60,14 @@ def _server_reachable() -> bool:
         return False
 
 
+def _live_tests_requested() -> bool:
+    return os.environ.get("STUDIO_OPS_LIVE_TESTS") == "1"
+
+
 requires_live_server_and_cli = pytest.mark.skipif(
-    shutil.which("claude") is None or not _server_reachable(),
-    reason="requires both the claude CLI and a live studio-ops server on :8010 "
-    "(start with: cd backend && .venv/bin/uvicorn app.main:app --port 8010)",
+    not _live_tests_requested() or shutil.which("claude") is None or not _server_reachable(),
+    reason="requires STUDIO_OPS_LIVE_TESTS=1, the claude CLI, and a live studio-ops "
+    "server on :8010 (start with: cd backend && .venv/bin/uvicorn app.main:app --port 8010)",
 )
 
 

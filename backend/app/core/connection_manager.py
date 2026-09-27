@@ -88,8 +88,12 @@ class ConnectionManager:
             del self.terminal_channels[pane_id]
 
     async def broadcast_terminal_bytes(self, pane_id: str, data: bytes) -> None:
+        # Snapshot with list(...) before the loop: this coroutine suspends at
+        # every `await`, and a concurrent connect/disconnect on the same
+        # pane_id mutates this exact set object (not a copy) — iterating the
+        # live set directly risks "set changed size during iteration".
         dead: list[WebSocket] = []
-        for ws in self.terminal_channels.get(pane_id, set()):
+        for ws in list(self.terminal_channels.get(pane_id, set())):
             try:
                 await ws.send_bytes(data)
             except Exception:
@@ -111,8 +115,10 @@ class ConnectionManager:
 
     @staticmethod
     async def _broadcast(sockets: set[WebSocket], message: dict) -> None:
+        # Same live-set-mutated-during-iteration hazard as
+        # broadcast_terminal_bytes above — snapshot before the loop.
         dead: list[WebSocket] = []
-        for ws in sockets:
+        for ws in list(sockets):
             try:
                 await ws.send_json(message)
             except Exception:

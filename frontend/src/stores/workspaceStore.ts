@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { getHttpBase, fetchWithRetry } from "@/systems/backendUrl";
+import { authedFetch } from "@/systems/apiAuth";
 
 export interface Workspace {
   id: string;
@@ -45,7 +46,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set, get) => ({
   create: async (name, repoPath) => {
     set({ error: null });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/workspaces`, {
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/workspaces`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, repo_path: repoPath }),
@@ -68,7 +69,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set, get) => ({
     // right after.
     set({ activeId: id });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/workspaces/${id}/activate`, { method: "POST" });
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/workspaces/${id}/activate`, { method: "POST" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
@@ -79,7 +80,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set, get) => ({
 
   remove: async (id) => {
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/workspaces/${id}`, { method: "DELETE" });
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/workspaces/${id}`, { method: "DELETE" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });

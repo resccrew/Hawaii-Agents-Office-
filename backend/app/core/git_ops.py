@@ -87,6 +87,26 @@ def is_git_repo(path: str) -> bool:
     return rc == 0 and out == "true"
 
 
+# Repos this backend will register/push are confined to the human's own home
+# directory, and specifically kept out of ~/.studio-ops (holds the API token
+# this whole auth layer relies on) and ~/.ssh (private keys). Public — both
+# `add_repo` below (the REST route's direct path) and
+# workspace_registry.create() (which must reject *before* registering a
+# workspace, not just before its own later add_repo call) check this.
+_DENIED_ROOTS = (Path.home() / ".studio-ops", Path.home() / ".ssh")
+
+
+def is_allowed_repo_path(resolved: Path) -> bool:
+    home = Path.home().resolve()
+    if resolved != home and home not in resolved.parents:
+        return False
+    for denied in _DENIED_ROOTS:
+        denied = denied.resolve()
+        if resolved == denied or denied in resolved.parents:
+            return False
+    return True
+
+
 @dataclass
 class GitConfig:
     active: str | None = None
@@ -168,7 +188,10 @@ def list_state() -> dict:
 
 
 def add_repo(path: str) -> dict:
-    p = str(Path(path).expanduser().resolve())
+    resolved = Path(path).expanduser().resolve()
+    if not is_allowed_repo_path(resolved):
+        raise ValueError(f"path is outside the allowed roots: {resolved}")
+    p = str(resolved)
     if not is_git_repo(p):
         raise ValueError(f"not a git repository: {p}")
     cfg = _load()

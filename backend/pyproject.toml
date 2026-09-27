@@ -21,6 +21,11 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
+    # build_sidecar.py shells out to `python -m PyInstaller` to produce the
+    # Tauri sidecar binary — wasn't declared anywhere, so a fresh checkout's
+    # `uv pip install -e ".[dev]"` left the desktop build broken with a bare
+    # ModuleNotFoundError the first time anyone tried `make desktop`.
+    "pyinstaller>=6.10",
 ]
 
 [tool.pytest.ini_options]

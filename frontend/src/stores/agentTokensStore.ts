@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { getHttpBase } from "@/systems/backendUrl";
+import { authedFetch } from "@/systems/apiAuth";
 
 // Deliberately NOT sharing api.ts's getAgents()/AgentSummary — this reads
 // the very same GET /api/v1/agents response but only cares about the
@@ -34,7 +35,7 @@ export const useAgentTokensStore = create<AgentTokensStore>()((set) => ({
   byAgentId: {},
   refresh: async () => {
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/agents`);
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/agents`);
       if (!resp.ok) return;
       const rows: RawAgentRow[] = await resp.json();
       const byAgentId: Record<string, AgentTokenStats> = {};
