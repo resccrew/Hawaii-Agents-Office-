@@ -31,8 +31,16 @@ export interface ReconnectingSocket {
   send: (data: string | ArrayBufferLike | Blob | ArrayBufferView) => void;
 }
 
+// A plain string for callers that don't need auth, or a factory resolved
+// fresh on every (re)connect attempt — needed because the auth token (see
+// apiAuth.ts) may not be available yet on the very first connect (Tauri's
+// invoke bridge is async); resolving it per-attempt means a retry after the
+// token becomes available picks it up, instead of a closure permanently
+// capturing whatever the URL was (or wasn't) at the first call.
+type UrlSource = string | (() => string | Promise<string>);
+
 export function connectWithRetry(
-  url: string,
+  url: UrlSource,
   handlers: ReconnectingSocketHandlers,
   opts?: { binaryType?: BinaryType },
 ): ReconnectingSocket {
@@ -43,26 +51,29 @@ export function connectWithRetry(
 
   const open = () => {
     if (stopped) return;
-    ws = new WebSocket(url);
-    if (opts?.binaryType) ws.binaryType = opts.binaryType;
-
-    ws.onopen = () => {
-      delay = INITIAL_DELAY_MS; // reset backoff on a successful connection
-      handlers.onOpen?.();
-    };
-
-    ws.onmessage = handlers.onMessage;
-
-    ws.onclose = () => {
-      handlers.onClose?.();
+    Promise.resolve(typeof url === "function" ? url() : url).then((resolvedUrl) => {
       if (stopped) return;
-      retryTimer = setTimeout(open, delay);
-      delay = Math.min(delay * 2, MAX_DELAY_MS);
-    };
+      ws = new WebSocket(resolvedUrl);
+      if (opts?.binaryType) ws.binaryType = opts.binaryType;
 
-    ws.onerror = () => {
-      ws?.close();
-    };
+      ws.onopen = () => {
+        delay = INITIAL_DELAY_MS; // reset backoff on a successful connection
+        handlers.onOpen?.();
+      };
+
+      ws.onmessage = handlers.onMessage;
+
+      ws.onclose = () => {
+        handlers.onClose?.();
+        if (stopped) return;
+        retryTimer = setTimeout(open, delay);
+        delay = Math.min(delay * 2, MAX_DELAY_MS);
+      };
+
+      ws.onerror = () => {
+        ws?.close();
+      };
+    });
   };
 
   open();

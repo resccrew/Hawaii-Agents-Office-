@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { getHttpBase } from "@/systems/backendUrl";
+import { authedFetch } from "@/systems/apiAuth";
 
 export type TerminalKind = "shell" | "claude" | "codex" | "antigravity";
 export type TerminalStatus = "running" | "exited";
@@ -28,7 +29,7 @@ export const useTerminalStore = create<TerminalStore>()((set, get) => ({
 
   refresh: async (workspaceId) => {
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/terminal?workspace_id=${encodeURIComponent(workspaceId)}`);
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/terminal?workspace_id=${encodeURIComponent(workspaceId)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const panes: TerminalPane[] = await resp.json();
       set((s) => {
@@ -44,7 +45,7 @@ export const useTerminalStore = create<TerminalStore>()((set, get) => ({
   create: async (workspaceId, cwd, kind = "shell") => {
     set({ error: null });
     try {
-      const resp = await fetch(`${getHttpBase()}/api/v1/terminal`, {
+      const resp = await authedFetch(`${getHttpBase()}/api/v1/terminal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspace_id: workspaceId, cwd, kind }),
@@ -68,7 +69,7 @@ export const useTerminalStore = create<TerminalStore>()((set, get) => ({
 
   close: async (paneId, workspaceId) => {
     try {
-      await fetch(`${getHttpBase()}/api/v1/terminal/${paneId}`, { method: "DELETE" });
+      await authedFetch(`${getHttpBase()}/api/v1/terminal/${paneId}`, { method: "DELETE" });
     } finally {
       set((s) => {
         const next = new Map(s.panesByWorkspace);

@@ -3,6 +3,7 @@
 import type { WebSocketMessage } from "@/lib/types";
 import { useRoomStore } from "@/stores/roomStore";
 import { useActivityLogStore } from "@/stores/activityLogStore";
+import { wsUrlWithToken } from "./apiAuth";
 import { getWsBase } from "./backendUrl";
 import { connectWithRetry } from "./reconnectingWebSocket";
 
@@ -33,7 +34,9 @@ function handleRoomMessage(event: MessageEvent) {
 // standing there.
 export function connectRoom(departmentId: string, baseUrl = getWsBase()): () => void {
   useRoomStore.getState().clear();
-  return connectWithRetry(`${baseUrl}/ws/room/${departmentId}`, { onMessage: handleRoomMessage });
+  return connectWithRetry(() => wsUrlWithToken(`${baseUrl}/ws/room/${departmentId}`), {
+    onMessage: handleRoomMessage,
+  });
 }
 
 // Studio-wide variant: every live agent regardless of department, backed by
@@ -42,5 +45,5 @@ export function connectRoom(departmentId: string, baseUrl = getWsBase()): () => 
 // single department's desks, which turned out not to be what was wanted.
 export function connectOverview(baseUrl = getWsBase()): () => void {
   useRoomStore.getState().clear();
-  return connectWithRetry(`${baseUrl}/ws/overview`, { onMessage: handleRoomMessage });
+  return connectWithRetry(() => wsUrlWithToken(`${baseUrl}/ws/overview`), { onMessage: handleRoomMessage });
 }

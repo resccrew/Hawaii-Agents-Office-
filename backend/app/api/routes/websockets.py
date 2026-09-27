@@ -20,8 +20,9 @@ but is kept above the catch-all too for the same reason to be safe.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
+from app.core import auth
 from app.core.connection_manager import get_manager
 from app.core.event_processor import get_processor, is_registered_agent
 
@@ -29,7 +30,7 @@ router = APIRouter()
 
 
 @router.websocket("/ws/overview")
-async def ws_overview(websocket: WebSocket) -> None:
+async def ws_overview(websocket: WebSocket, _auth: None = Depends(auth.enforce_ws_auth)) -> None:
     manager = get_manager()
     await manager.connect_overview(websocket)
     try:
@@ -61,7 +62,7 @@ async def ws_overview(websocket: WebSocket) -> None:
 
 
 @router.websocket("/ws/room/{room_id}")
-async def ws_room(websocket: WebSocket, room_id: str) -> None:
+async def ws_room(websocket: WebSocket, room_id: str, _auth: None = Depends(auth.enforce_ws_auth)) -> None:
     manager = get_manager()
     await manager.connect_room(room_id, websocket)
     try:
@@ -91,7 +92,7 @@ async def ws_room(websocket: WebSocket, room_id: str) -> None:
 
 
 @router.websocket("/ws/{session_id}")
-async def ws_session(websocket: WebSocket, session_id: str) -> None:
+async def ws_session(websocket: WebSocket, session_id: str, _auth: None = Depends(auth.enforce_ws_auth)) -> None:
     manager = get_manager()
     await manager.connect_session(session_id, websocket)
     try:

@@ -1,6 +1,7 @@
 "use client";
 
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { getApiToken } from "./apiAuth";
 
 // Single source of truth for "where is the backend" — reads the
 // General-settings override (see SettingsModal's "general" tab) at CALL
@@ -25,9 +26,11 @@ export function getWsBase(): string {
 // mount (not for user-triggered actions after the app is already up).
 export async function fetchWithRetry(url: string, attempts = 40, delayMs = 1000): Promise<Response> {
   let lastError: unknown;
+  const token = await getApiToken();
+  const headers: HeadersInit | undefined = token ? { "X-API-Key": token } : undefined;
   for (let i = 0; i < attempts; i++) {
     try {
-      return await fetch(url);
+      return await fetch(url, { headers });
     } catch (e) {
       lastError = e;
       if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs));

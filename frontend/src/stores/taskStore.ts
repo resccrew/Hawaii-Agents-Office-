@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { authedFetch, wsUrlWithToken } from "@/systems/apiAuth";
 import { getHttpBase, getWsBase } from "@/systems/backendUrl";
 import { connectWithRetry } from "@/systems/reconnectingWebSocket";
 
@@ -41,7 +42,7 @@ export const selectTasksFor = (departmentId: string) => (state: TaskStore) =>
 // Bugfix: now auto-reconnects instead of the task board going silently
 // stale on any connection drop.
 export function connectTaskBoard(departmentId: string, baseUrl = getWsBase()): () => void {
-  return connectWithRetry(`${baseUrl}/ws/tasks/${departmentId}`, {
+  return connectWithRetry(() => wsUrlWithToken(`${baseUrl}/ws/tasks/${departmentId}`), {
     onMessage: (event) => {
       try {
         const msg = JSON.parse(event.data);
@@ -60,7 +61,7 @@ export async function createTask(
   subject: string,
   apiBase = getHttpBase(),
 ): Promise<void> {
-  await fetch(`${apiBase}/api/v1/tasks`, {
+  await authedFetch(`${apiBase}/api/v1/tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ department_id: departmentId, subject }),
@@ -72,7 +73,7 @@ export async function updateTaskStatus(
   status: TaskStatus,
   apiBase = getHttpBase(),
 ): Promise<void> {
-  await fetch(`${apiBase}/api/v1/tasks/${taskId}`, {
+  await authedFetch(`${apiBase}/api/v1/tasks/${taskId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
@@ -87,7 +88,7 @@ export async function dispatchTask(
   taskId: string,
   apiBase = getHttpBase(),
 ): Promise<void> {
-  const res = await fetch(`${apiBase}/api/v1/tasks/${taskId}/dispatch`, {
+  const res = await authedFetch(`${apiBase}/api/v1/tasks/${taskId}/dispatch`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),

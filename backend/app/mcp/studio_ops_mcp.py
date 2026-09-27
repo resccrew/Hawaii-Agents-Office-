@@ -26,6 +26,7 @@ of relying on the prompt to disambiguate every time.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -33,6 +34,21 @@ from mcp.server.fastmcp import FastMCP
 BACKEND_URL = os.environ.get("STUDIO_OPS_BACKEND_URL", "http://localhost:8010")
 CALLER_AGENT_ID = os.environ.get("STUDIO_OPS_AGENT_ID", "")
 CALLER_SESSION_ID = os.environ.get("STUDIO_OPS_AGENT_SESSION_ID", "")
+
+# Same token file app/core/auth.py's backend generates/reads — this process
+# is a separate `python -m ... studio_ops_mcp` subprocess (started by Claude
+# Code via --mcp-config, not part of the uvicorn process), so it needs its
+# own read of the shared file rather than an in-process import.
+_TOKEN_FILE = Path.home() / ".studio-ops" / "api-token"
+
+
+def _auth_headers() -> dict[str, str]:
+    try:
+        token = _TOKEN_FILE.read_text().strip()
+    except OSError:
+        return {}
+    return {"X-API-Key": token} if token else {}
+
 
 mcp = FastMCP("studio-ops")
 
@@ -42,7 +58,7 @@ async def studio_list_agents(department_id: str | None = None) -> list[dict]:
     """List agents currently registered in Studio Ops, optionally filtered
     to one department. Use this before studio_send_message to find a
     target agent's session_id."""
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         params = {"department_id": department_id} if department_id else {}
         resp = await client.get("/api/v1/agents", params=params)
         resp.raise_for_status()
@@ -74,7 +90,7 @@ async def studio_spawn_agent(
     the agent_id with studio_update_task's assignee_agent_id). This call
     blocks until the new agent has finished its first turn, so it may take a
     few seconds."""
-    async with httpx.AsyncClient(base_url=BACKEND_URL, timeout=300.0) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, timeout=300.0, headers=_auth_headers()) as client:
         resp = await client.post(
             "/api/v1/agents",
             json={
@@ -104,7 +120,7 @@ async def studio_send_message(target_session_id: str, message: str) -> dict:
     the same best-effort queue as a human chat message — if the target is
     mid-turn, it queues and drains automatically once free rather than
     being dropped."""
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.post(
             f"/api/v1/chat/{target_session_id}/messages", json={"text": message}
         )
@@ -119,7 +135,7 @@ async def studio_send_message(target_session_id: str, message: str) -> dict:
 @mcp.tool()
 async def studio_list_tasks(department_id: str) -> list[dict]:
     """List the shared task board for a department."""
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.get("/api/v1/tasks", params={"department_id": department_id})
         resp.raise_for_status()
         return resp.json()
@@ -129,7 +145,7 @@ async def studio_list_tasks(department_id: str) -> list[dict]:
 async def studio_create_task(department_id: str, subject: str, description: str = "") -> dict:
     """Create a task on the shared board — visible to every agent and the
     human in that department, not just you."""
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.post(
             "/api/v1/tasks",
             json={
@@ -166,7 +182,7 @@ async def studio_update_task(
         payload["assignee_agent_id"] = assignee_agent_id
     if result:
         payload["result"] = result
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.patch(f"/api/v1/tasks/{task_id}", json=payload)
         resp.raise_for_status()
         return resp.json()
@@ -182,7 +198,7 @@ async def studio_memory_list(scope: str | None = None) -> list[dict]:
     {slug, name, description} per fact — use studio_memory_read for the
     full body of any that look relevant."""
     target = scope or CALLER_AGENT_ID
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.get(f"/api/v1/memory/{target}")
         resp.raise_for_status()
         return resp.json()
@@ -193,7 +209,7 @@ async def studio_memory_read(slug: str, scope: str | None = None) -> dict:
     """Read one memory fact's full body by slug (from studio_memory_list).
     scope defaults to your own agent memory, same as studio_memory_list."""
     target = scope or CALLER_AGENT_ID
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.get(f"/api/v1/memory/{target}/{slug}")
         resp.raise_for_status()
         return resp.json()
@@ -217,7 +233,7 @@ async def studio_memory_write(
     facts, decisions, conventions), omitted for your own private agent
     memory (progress notes, things specific to your own task)."""
     target = scope or CALLER_AGENT_ID
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.put(
             f"/api/v1/memory/{target}/{slug}",
             json={"name": name, "description": description, "type": type, "body": body},
@@ -232,7 +248,7 @@ async def studio_generate_image(prompt: str) -> dict:
     provider) to generate an image from a prompt. Returns an error if no
     generative provider is configured — this is expected until an API key
     is set (STUDIO_OPS_NANOBANANA_API_KEY), not a bug."""
-    async with httpx.AsyncClient(base_url=BACKEND_URL) as client:
+    async with httpx.AsyncClient(base_url=BACKEND_URL, headers=_auth_headers()) as client:
         resp = await client.post(
             "/api/v1/generate", json={"provider": "nanobanana", "kind": "image", "prompt": prompt}
         )
