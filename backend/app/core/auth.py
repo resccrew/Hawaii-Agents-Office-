@@ -14,6 +14,9 @@ all read this one file instead of needing their own distribution mechanism.
 from __future__ import annotations
 
 import hmac
+import logging
+import os
+import re
 import secrets
 from pathlib import Path
 
@@ -45,7 +48,14 @@ _token_cache: str | None = None
 def get_token() -> str:
     """Read the shared token, generating it on first call. Cached in-process
     for the life of the backend — the file only changes if a human deletes
-    it (next start regenerates)."""
+    it (next start regenerates).
+
+    Directory and file are created with their final restrictive mode set
+    atomically at creation time (`mkdir(mode=...)` under a tightened umask,
+    `os.open` with O_CREAT|O_EXCL and an explicit mode) rather than created
+    permissively and `chmod`ed afterwards — the latter leaves a window,
+    however brief, where another local process could open the token file
+    before its permissions are tightened."""
     global _token_cache
     if _token_cache is not None:
         return _token_cache
@@ -56,11 +66,26 @@ def get_token() -> str:
             _token_cache = existing
             return _token_cache
 
-    TOKEN_DIR.mkdir(parents=True, exist_ok=True)
-    TOKEN_DIR.chmod(0o700)
-    token = secrets.token_hex(32)
-    TOKEN_FILE.write_text(token)
-    TOKEN_FILE.chmod(0o600)
+    old_umask = os.umask(0o077)
+    try:
+        TOKEN_DIR.mkdir(parents=True, mode=0o700, exist_ok=True)
+        token = secrets.token_hex(32)
+        try:
+            fd = os.open(TOKEN_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            # Lost a startup race to another process — read what it wrote
+            # rather than clobbering a token something else may already be
+            # relying on.
+            existing = TOKEN_FILE.read_text().strip()
+            _token_cache = existing
+            return _token_cache
+        try:
+            os.write(fd, token.encode())
+        finally:
+            os.close(fd)
+    finally:
+        os.umask(old_umask)
+
     _token_cache = token
     return token
 
@@ -103,3 +128,34 @@ async def enforce_ws_auth(websocket: WebSocket) -> None:
     token = websocket.query_params.get("token")
     if not token_matches(token):
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+
+_TOKEN_QUERY_RE = re.compile(r"(token=)[^&\s\"]+")
+
+
+class _MaskWsTokenFilter(logging.Filter):
+    """The only way a browser WebSocket can present the token is in the URL
+    (`?token=...` — WS clients can't set custom headers), so it's the one
+    place the real value legitimately travels. uvicorn's access log would
+    otherwise write that same URL, query string and all, to disk on every
+    connection — leaking the token into a log file with much looser
+    permissions (or a log aggregator) than api-token's 0600. Masks it in
+    place instead of disabling access logging altogether, since REST access
+    logs are still useful for debugging."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except (TypeError, ValueError):
+            return True
+        if "/ws/" in message and "token=" in message:
+            record.msg = _TOKEN_QUERY_RE.sub(r"\1***", message)
+            record.args = ()
+        return True
+
+
+def install_ws_log_token_mask() -> None:
+    """Call once at startup (app.main does, at import time) — idempotent."""
+    access_logger = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, _MaskWsTokenFilter) for f in access_logger.filters):
+        access_logger.addFilter(_MaskWsTokenFilter())

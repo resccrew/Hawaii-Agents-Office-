@@ -22,6 +22,7 @@ from app.core.terminal_registry import get_terminal_registry
 STUDIO_TOML = Path(__file__).resolve().parent.parent / "studio.toml"
 
 logging.basicConfig(level=logging.INFO)
+auth.install_ws_log_token_mask()
 
 
 @asynccontextmanager
