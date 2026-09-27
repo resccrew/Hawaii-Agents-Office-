@@ -30,6 +30,15 @@ agent-workspaces/
 state/
 chat-uploads/
 
+# Repos cloned locally through the git bar's "connect a GitHub repo" flow
+# (backend/app/core/git_ops.py's select_github_repo) — someone else's
+# working tree, not part of this project. Was untracked-but-not-ignored
+# before, which is exactly what makes `git add -A` in git_ops.push()
+# dangerous: the default active repo on first run is studio-ops itself, so
+# an un-ignored clone sitting in here would get staged as a broken gitlink
+# on the next push.
+repos/
+
 # Playwright MCP test debris (screenshots, console logs from manual browser testing)
 .playwright-mcp/
 
